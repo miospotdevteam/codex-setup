@@ -67,7 +67,6 @@ RESEARCH_TYPES = {
 }
 REVIEW_TYPES = {
     "feature-dev:code-reviewer",
-    "superpowers:code-reviewer",
     "pr-review-toolkit:code-reviewer",
     "pr-review-toolkit:silent-failure-hunter",
     "pr-review-toolkit:comment-analyzer",

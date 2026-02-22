@@ -32,6 +32,7 @@ Look for installed skills that match these needs:
 | When you need... | Look for skills about... |
 |---|---|
 | Brainstorming, creative work | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
+| Writing implementation plans | **Always** use `look-before-you-leap:writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | "testing", "TDD", "test-driven" |
 | Frontend UI work | "frontend design", "UI", "components" |
 | Security review | "security", "authentication", "auth" |
@@ -103,32 +104,18 @@ from zero.
 
 ## Step 2: Plan (write to disk before editing code)
 
-Follow **persistent-plans Phase 1** (Create the Plan).
+**Invoke `look-before-you-leap:writing-plans`** to produce the masterPlan.
+The skill consumes your discovery.md, identifies applicable discipline
+checklists, structures TDD-granularity steps, and writes the masterPlan
+to `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 
-Use the template in `references/master-plan-format.md`. Plans live in
-`.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+Follow **persistent-plans Phase 1** (Create the Plan) for the structural
+rules — the writing-plans skill handles the content.
 
 Initialize the plan directory if needed:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/init-plan-dir.sh
 ```
-
-### Discipline checklists
-
-Read the relevant checklist BEFORE starting the associated step:
-
-| Discipline | Read when... | File |
-|---|---|---|
-| Testing | Writing or modifying tests | `references/testing-checklist.md` |
-| UI Consistency | Building or modifying UI | `references/ui-consistency-checklist.md` |
-| Security | Handling auth, input, secrets | `references/security-checklist.md` |
-| Git | Committing or branching | `references/git-checklist.md` |
-| Linting | After any code changes | `references/linting-checklist.md` |
-| Dependencies | Adding, removing, or updating packages | `references/dependency-checklist.md` |
-| API Contracts | Touching API route handlers, API endpoints, or client API calls | `references/api-contracts-checklist.md` |
-| Exploration | Before planning any task | `references/exploration-protocol.md` |
-
-Each checklist points to a deep guide for comprehensive coverage.
 
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
 obvious single-line change.
