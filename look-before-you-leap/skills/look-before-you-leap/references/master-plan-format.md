@@ -17,10 +17,12 @@ original conversation.>
 
 ## Required Skills
 
-<List any installed skills that should be invoked at specific steps. Format:
+<List any installed skills that should be invoked at specific steps. Use exact
+skill identifiers — not vague topic hints — so this section survives compaction.
+Format:
 
-- **Step N**: look for skills about <topic> (e.g., "testing", "frontend design")
-- **Step M**: look for skills about <topic>
+- **Step N**: `look-before-you-leap:frontend-design` (full mode)
+- **Step M**: `look-before-you-leap:writing-plans` (plan generation)
 
 If no external skills are needed, write "None — all work covered by core
 disciplines.">
@@ -81,6 +83,7 @@ You are NOT ready to plan until confidence is Medium or higher.>
 
 ### Step 1: <Title>
 - **Status**: [ ] pending
+- **Skill**: `look-before-you-leap:refactoring` | none
 - **Simplify**: true/false
 - **Sub-plan**: none
 - **Files involved**: `src/foo.ts`, `src/bar.ts`
@@ -96,6 +99,7 @@ You are NOT ready to plan until confidence is Medium or higher.>
 
 ### Step 2: <Title>
 - **Status**: [ ] pending
+- **Skill**: none
 - **Simplify**: true/false
 - **Sub-plan**: `sub-plan-01-schema-migration.md`
 - **Files involved**: `drizzle/schema.ts`, `src/db/migrations/`, `src/models/`
@@ -249,6 +253,7 @@ High — issue is clear, fix is straightforward.
 
 ### Step 1: Fix button alignment
 - **Status**: [ ] pending
+- **Skill**: none
 - **Simplify**: false
 - **Sub-plan**: none
 - **Files involved**: `src/app/(auth)/login/page.tsx`

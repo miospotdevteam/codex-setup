@@ -77,6 +77,7 @@ in the **Progress** checklist within each step:
 ```markdown
 ### Step N: <Component Name>
 - **Status**: [ ] pending
+- **Skill**: `look-before-you-leap:test-driven-development` | none
 - **Simplify**: true/false
 - **Files involved**: `src/auth/validator.ts`, `tests/auth/validator.test.ts`
 - **Description**: Add email validation to the auth module.
@@ -107,6 +108,11 @@ simplification pass manually.
 
 #### Key rules
 
+- **Exact skill identifiers** — in Required Skills AND in each step's
+  `Skill` field, use the full skill name (e.g., `look-before-you-leap:frontend-design`),
+  never vague hints like "look for skills about testing". Post-compaction
+  Claude has no memory — only exact names let it invoke the right skill.
+  Use `none` for steps that don't need a specialized skill.
 - **Complete code in every step** — not "add validation" but the actual
   code the engineer should write
 - **Exact file paths** — every step lists Create/Modify/Test files
@@ -123,6 +129,7 @@ simplification pass manually.
 ### Step 1: Email validation utility
 
 - **Status**: [ ] pending
+- **Skill**: none
 - **Simplify**: false
 - **Files involved**:
   - Create: `src/lib/validate-email.ts`

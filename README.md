@@ -46,7 +46,10 @@ The plugin doesn't just give instructions — it enforces them:
 | **UserPromptSubmit** | `onboarding.sh` | First-run setup: walks user through config enrichment, CLAUDE.md creation, and plugin suggestions |
 | **PreToolUse** (Edit\|Write) | `enforce-plan.sh` | Blocks code edits if no active plan exists |
 | **PreToolUse** (Edit\|Write) | `check-api-contracts.sh` | Warns when editing API boundary files |
+| **PreToolUse** (Bash) | `enforce-plan-bash.sh` | Blocks Bash file-write bypasses (redirects, sed -i, tee) without an active plan |
+| **PreToolUse** (Bash) | `guard-plan-completion.sh` | Blocks moving a plan to completed/ if it has unchecked steps |
 | **PreToolUse** (Task) | `inject-subagent-context.sh` | Injects discipline rules into every sub-agent, creates shared discovery file for cross-agent findings |
+| **PostToolUse** (Edit\|Write) | `remind-plan-update.sh` | Reminds to checkpoint the plan after 3 code edits without a plan update |
 | **PostToolUse** (Edit\|Write) | `auto-complete-plan.sh` | Detects when all plan steps are complete and prompts finalization |
 | **Stop** | `verify-plan-on-stop.sh` | Blocks stopping if the active plan has unfinished steps |
 
@@ -96,16 +99,22 @@ look-before-you-leap/
 │   ├── session-start.sh                 # SessionStart: skill injection + plan detection + config
 │   ├── onboarding.sh                    # UserPromptSubmit: first-run setup walkthrough
 │   ├── enforce-plan.sh                  # PreToolUse: blocks edits without an active plan
+│   ├── enforce-plan-bash.sh             # PreToolUse: blocks Bash file-write bypasses
 │   ├── check-api-contracts.sh           # PreToolUse: API boundary warnings
+│   ├── guard-plan-completion.sh         # PreToolUse: blocks moving incomplete plans
 │   ├── inject-subagent-context.sh       # PreToolUse: discipline injection for sub-agents
+│   ├── remind-plan-update.sh            # PostToolUse: checkpoint reminder after 3 edits
 │   ├── auto-complete-plan.sh            # PostToolUse: detects plan completion
 │   ├── verify-plan-on-stop.sh           # Stop: blocks stopping with unfinished plans
 │   └── lib/
 │       ├── read-config.py               # YAML frontmatter → JSON config reader
-│       └── detect-stack.py              # Auto-detects project stack
+│       ├── detect-stack.py              # Auto-detects project stack
+│       └── find-root.sh                 # Finds project root directory
 └── skills/
     ├── look-before-you-leap/
     │   ├── SKILL.md                     # Layer 1: The conductor
+    │   ├── evals/
+    │   │   └── evals.json               # Skill evaluation definitions
     │   ├── references/
     │   │   ├── exploration-protocol.md  # 8-question exploration checklist
     │   │   ├── exploration-guide.md     # Deep exploration techniques
@@ -117,12 +126,18 @@ look-before-you-leap/
     │   │   ├── testing-strategy.md      # Layer 3: TDD-lite, test pyramid
     │   │   ├── ui-consistency-checklist.md  # Layer 2: Design tokens, components
     │   │   ├── ui-consistency-guide.md  # Layer 3: Drift detection
+    │   │   ├── frontend-design-checklist.md # Layer 2: Accessibility, responsive, performance
+    │   │   ├── frontend-design-guide.md # Layer 3: Aesthetic axes, fonts, animation
     │   │   ├── security-checklist.md    # Layer 2: Auth, input, secrets
     │   │   ├── security-guide.md        # Layer 3: OWASP, slopsquatting
     │   │   ├── git-checklist.md         # Layer 2: Commits, branches
     │   │   ├── linting-checklist.md     # Layer 2: Linter discipline
     │   │   ├── dependency-checklist.md  # Layer 2: Package management
     │   │   ├── api-contracts-checklist.md   # Layer 2: Shared schemas
+    │   │   ├── api-contracts-guide.md   # Layer 3: API boundary discipline
+    │   │   ├── debugging-root-cause-tracing.md      # Layer 3: Trace bugs to source
+    │   │   ├── debugging-defense-in-depth.md        # Layer 3: Multi-layer validation
+    │   │   ├── debugging-condition-based-waiting.md  # Layer 3: Replace timeouts with polling
     │   │   └── verification-commands.md # tsc/lint/test commands by ecosystem
     │   └── scripts/
     │       ├── init-plan-dir.sh         # Sets up .temp/plan-mode/
@@ -132,8 +147,16 @@ look-before-you-leap/
     │   └── SKILL.md                     # Companion: behavioral rules
     ├── persistent-plans/
     │   └── SKILL.md                     # Companion: plan management rules
-    └── brainstorming/
-        └── SKILL.md                     # Collaborative design exploration
+    ├── brainstorming/
+    │   └── SKILL.md                     # Collaborative design exploration
+    ├── writing-plans/
+    │   └── SKILL.md                     # Plan generation with TDD-granularity steps
+    ├── frontend-design/
+    │   └── SKILL.md                     # Frontend UI design with aesthetic axes
+    ├── refactoring/
+    │   └── SKILL.md                     # Post-execution code simplification
+    └── systematic-debugging/
+        └── SKILL.md                     # Root cause investigation before fixes
 ```
 
 ## Origin Story
