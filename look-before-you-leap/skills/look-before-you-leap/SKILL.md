@@ -75,10 +75,13 @@ exploring.
 ### Minimum exploration actions
 
 1. Read the files you plan to modify AND their imports
-2. Find consumers of any file you'll change — if dep maps are configured
-   (check project profile for the full command with resolved paths),
-   run `deps-query.py` for instant results; otherwise `Grep` for
-   import statements
+2. Find consumers of any file you'll change:
+   - **If dep maps are configured** (check project profile for the full
+     command with resolved paths): you MUST run `deps-query.py` for every
+     file you plan to modify. This is NOT optional — do NOT fall back to
+     `Grep` for import patterns when dep maps exist. Run deps-query BEFORE
+     any other consumer analysis.
+   - **If dep maps are NOT configured**: `Grep` for import statements.
 3. Read 2-3 sibling files to learn patterns
 4. Check CLAUDE.md/README for project conventions
 5. Search for existing solutions before implementing from scratch
@@ -247,6 +250,10 @@ This plugin enforces discipline through hooks, not just instructions:
 - **PostToolUse(Edit|Write)**: Counts code file edits. After 3 edits
   without updating masterPlan.md, injects a checkpoint reminder. Resets
   when any plan file is edited.
+- **PreToolUse(Grep)**: When grepping for import/consumer patterns and dep
+  maps are configured, injects a reminder to use `deps-query.py` instead.
+  Does not block — serves as a guardrail against falling back to grep when
+  a better tool exists.
 - **PreToolUse(Task)**: Automatically injects engineering discipline into
   every sub-agent prompt. Sub-agents receive the core rules (no scope cuts,
   no type shortcuts, blast radius, verification) plus active plan path.

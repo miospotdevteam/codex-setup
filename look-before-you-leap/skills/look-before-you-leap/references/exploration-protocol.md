@@ -28,13 +28,22 @@ functions, exports, and line count.
 
 Who imports or uses the files you're changing?
 
-**How to answer (dep maps configured)**: Run `deps-query.py` — returns
-all consumers across all modules instantly. See `references/dependency-mapping.md`.
+**HARD GATE**: If dep maps are configured in the project profile, you MUST
+run `deps-query.py` for every file you plan to modify. Do NOT use `Grep` as
+a substitute — `Grep` for import patterns is the fallback ONLY when dep maps
+are not configured. Dep maps give you complete, cross-module consumer data
+instantly; ad-hoc grep is slower, less reliable, and misses transitive
+consumers.
+
+**How to answer (dep maps configured)**: Run `deps-query.py` for each entry
+point file. Record the DEPENDENTS output. See `references/dependency-mapping.md`.
 
 **How to answer (no dep maps)**: `Grep` for import/require statements
 referencing each entry point file. Example: `Grep pattern="from ['\"].*auth" type="ts"`
 
 **Output**: List of consumer files with count. If >10, list count + examples.
+When dep maps are configured, include the exact deps-query output for each
+file queried.
 
 ## 4. What patterns already exist?
 
@@ -68,8 +77,9 @@ prettier config. Note import ordering, naming style, file organization.
 
 What could break if you get this wrong?
 
-**How to answer (dep maps configured)**: `deps-query.py` outputs a
-DEPENDENTS section with count — this IS the direct blast radius.
+**How to answer (dep maps configured)**: You MUST use `deps-query.py` —
+its DEPENDENTS section with count IS the direct blast radius. Do NOT
+estimate blast radius from ad-hoc grep when dep maps are available.
 
 **How to answer (no dep maps)**: For each entry point, count its consumers
 (from Q3). For shared types/utilities, grep for all usages. Identify any

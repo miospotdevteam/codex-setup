@@ -64,10 +64,11 @@ Create `refactoring-contract.md` in the active plan directory:
 1. **List targets** — the specific functions, classes, types, files being
    refactored
 2. **Find all exports** — what does each target expose that others depend on?
-3. **Find every consumer** — if dep maps are configured, use `deps-query.py`
-   for instant DEPENDENTS; otherwise grep for import statements, direct
-   references, re-exports. Be thorough: search for the function name, the
-   file path in imports, type references, and string references
+3. **Find every consumer** — if dep maps are configured, you MUST use
+   `deps-query.py` for instant DEPENDENTS (do NOT grep for consumers when
+   dep maps exist); otherwise grep for import statements, direct references,
+   re-exports. Be thorough: search for the function name, the file path in
+   imports, type references, and string references
 4. **Find all tests** — tests that directly test the targets AND tests that
    exercise code paths through the targets
 5. **Define the expected after-state** — what should be true when you're done?
@@ -96,7 +97,8 @@ Categorize the refactoring to set expectations and scope boundaries.
 - List files that are explicitly OUT of scope (adjacent but not affected)
 - If the refactoring could cascade (rename triggers import changes that
   trigger re-exports), map the full cascade chain before starting — use
-  `deps-query.py` if dep maps are configured to trace the chain instantly
+  `deps-query.py` (MUST use when dep maps are configured) to trace the chain
+  instantly — do NOT grep for consumers when dep maps exist
 
 **Rule: if the blast radius exceeds 10 files, create a sub-plan with groups.**
 Do not attempt a 15-file refactoring as one step.

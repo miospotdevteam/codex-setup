@@ -55,8 +55,11 @@ src/api/ even though it imports from auth.">
 and brief descriptions of what they contain.>
 
 ### Consumers
-<Who imports/uses the files you're changing. Include file paths found via
-grep. If many consumers, list count and representative examples.>
+<Who imports/uses the files you're changing. If dep maps are configured,
+you MUST list the deps-query.py output for each queried file (do NOT
+substitute with grep results). Include DEPENDENTS count and file paths.
+If dep maps are not configured, include file paths found via grep.
+If many consumers, list count and representative examples.>
 
 ### Existing Patterns
 <How similar problems are already solved in this codebase. Naming

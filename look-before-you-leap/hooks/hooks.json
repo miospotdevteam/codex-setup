@@ -65,6 +65,16 @@
         ]
       },
       {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/remind-deps-query.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Task",
         "hooks": [
           {

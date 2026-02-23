@@ -40,14 +40,22 @@ File you're changing
   └── What it shares with siblings (common patterns)
 ```
 
-Use `Grep` to trace both directions. Don't stop at the first level — if
-you're changing a utility that's imported by a component that's imported
-by a page, you need to know about the page too.
+**If dep maps are configured**: You MUST use `deps-query.py` to trace both
+directions. It returns DEPENDENCIES and DEPENDENTS across all modules
+instantly — including transitive cross-module consumers that grep would miss.
+Do NOT fall back to grep for consumer analysis when dep maps exist.
 
-### Using dependency maps
+**If dep maps are NOT configured**: Use `Grep` to trace both directions.
+Don't stop at the first level — if you're changing a utility that's imported
+by a component that's imported by a page, you need to know about the page
+too.
 
-If the project profile shows "Dep maps: configured", use `deps-query.py`
-instead of manual grep for consumer analysis:
+### Using dependency maps (MANDATORY when configured)
+
+If the project profile shows "Dep maps: configured", you MUST use
+`deps-query.py` instead of manual grep for consumer analysis. This is not
+a suggestion — dep maps are the primary and required method for finding
+consumers in configured projects:
 
 ```bash
 python3 <plugin>/scripts/deps-query.py <project_root> <file_path>
@@ -60,8 +68,10 @@ consumers (e.g., `packages/shared` imported by `apps/api`).
 The maps auto-regenerate when stale (files edited since last generation).
 See `references/dependency-mapping.md` for full details.
 
-**When to still use grep**: For non-TypeScript files, for string references
-(config keys, env vars), or when dep maps aren't configured.
+**When to use grep instead**: ONLY for non-TypeScript files, for string
+references (config keys, env vars), or when dep maps are not configured.
+Never grep for import/from/require patterns on TypeScript files when dep
+maps exist — that is exactly what deps-query.py does, but better.
 
 ### Check for feature flags and configuration
 

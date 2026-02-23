@@ -143,8 +143,8 @@ if dep_maps and dep_maps.get("modules"):
     scripts_dir = os.path.join(plugin_root, "skills", "look-before-you-leap", "scripts") if plugin_root else ""
     module_count = len(dep_maps["modules"])
     base_rules.append(
-        f"- Dep maps configured ({module_count} modules): use deps-query.py for "
-        "consumer/blast-radius analysis instead of manual grep. "
+        f"- Dep maps configured ({module_count} modules): you MUST use deps-query.py for "
+        "consumer/blast-radius analysis — do NOT grep for import/consumer patterns. "
         "Shows IMPORTS (what a file depends on) and DEPENDENTS (who depends on it)."
     )
     if scripts_dir and project_root:
