@@ -30,7 +30,7 @@ during first-run onboarding based on the detected stack.
 
 | Plugin | When |
 |---|---|
-| `code-simplifier` | User wants automated code simplification |
+| `code-simplifier` | User wants automated code simplification (note: `look-before-you-leap` now includes this as refactoring quick mode — only suggest if user doesn't have `look-before-you-leap`) |
 | `skill-creator` | User wants to create custom skills |
 
 ## Install command

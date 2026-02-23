@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "Use before any creative work — new features, components, behavior changes. Turns vague ideas into concrete designs through collaborative dialogue before any code is written. Adapted from superpowers by Jesse Vincent (github.com/obra/superpowers, MIT License)."
+description: "Use before any creative work — new features, components, behavior changes. Turns vague ideas into concrete designs through collaborative dialogue before any code is written."
 ---
 
 # Brainstorming

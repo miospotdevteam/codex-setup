@@ -140,6 +140,3 @@ look-before-you-leap/
 
 This plugin was built iteratively through real-world testing on production codebases. Each rule exists because Claude actually made that specific mistake. The sub-plan triggers, checkpoint frequency, auto-compaction survival logic, and discipline checklists were all calibrated based on actual failures during real tasks.
 
-## Acknowledgments
-
-The **brainstorming** skill is adapted from [superpowers](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/superpowers) by Jesse Vincent. superpowers is an excellent agentic skills framework — if you want a broader set of development skills beyond engineering discipline, check it out.

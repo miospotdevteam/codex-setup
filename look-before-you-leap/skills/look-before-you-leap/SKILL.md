@@ -38,7 +38,8 @@ Look for installed skills that match these needs:
 | Security review | "security", "authentication", "auth" |
 | Code review | "code review", "review" |
 | Debugging | **Always** use `look-before-you-leap:systematic-debugging` — never another plugin's debugging skill |
-| Post-execution simplification | **Always** use `look-before-you-leap:code-simplifier` — never another plugin's code-simplifier skill |
+| Refactoring, restructuring, extracting, moving files | **Always** use `look-before-you-leap:refactoring` (full mode) — never another plugin's refactoring skill |
+| Post-execution simplification | **Always** use `look-before-you-leap:refactoring` (quick mode) — never another plugin's code-simplifier skill |
 | PR/commit workflow | "commit", "PR", "git" |
 
 If no specialized skill exists, use the checklists and guides in `references/`.
@@ -186,10 +187,10 @@ synthesize results.
 ### Post-step simplification
 
 When a completed step has `Simplify: true` in the plan, dispatch a
-code-simplifier sub-agent after marking the step `[x]`:
+refactoring sub-agent (quick mode) after marking the step `[x]`:
 
 1. **Run tests first** — establish a passing baseline before dispatch
-2. **Dispatch** the `code-simplifier` sub-agent (foreground) with:
+2. **Dispatch** the `refactoring` sub-agent in quick mode (foreground) with:
    - The step number and its "Files involved" list
    - The active plan path
 3. **After the agent returns**, record its simplification summary in the
