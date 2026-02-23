@@ -73,6 +73,25 @@ The auto-generated `.claude/look-before-you-leap.local.md` contains YAML frontma
 
 To customize, edit the file directly. Add it to `.gitignore` if you don't want it committed.
 
+## Prerequisites
+
+### Required
+
+| Dependency | Why | Install |
+|---|---|---|
+| `python3` | All hooks use Python 3 for JSON parsing (stdlib only — no pip packages needed) | Pre-installed on macOS. Linux: `sudo apt install python3` |
+| `bash` | All hooks and scripts use bash | Pre-installed on macOS and Linux |
+| `git` | Used for project root detection | Pre-installed on macOS (Xcode tools). Linux: `sudo apt install git` |
+
+Standard POSIX tools (`find`, `grep`, `sed`, `awk`, `stat`, `sort`, `head`, `cut`, `wc`) are also required but ship with all macOS and Linux distributions.
+
+### Optional
+
+| Dependency | Why | Install |
+|---|---|---|
+| `madge` | Dependency graph analysis for blast-radius tracking. Only needed if you configure `dep_maps` in `.claude/look-before-you-leap.local.md` | `npm install -g madge` or use on-demand via `npx` (no install needed) |
+| Node.js | Required only if using `madge` | [nodejs.org](https://nodejs.org) |
+
 ## Installation
 
 ### From the plugin marketplace

@@ -194,6 +194,8 @@ export PLANS_SKILL_FILE_PATH="$PLANS_SKILL_FILE"
 export ACTIVE_PLAN_SUMMARY="$active_plan_summary"
 export SKILL_INVENTORY="$skill_inventory"
 export PROJECT_CONFIG_JSON
+export HOOK_PLUGIN_ROOT="$PLUGIN_ROOT"
+export HOOK_PROJECT_ROOT="$PROJECT_ROOT"
 
 python3 << 'PYEOF'
 import json
@@ -248,9 +250,14 @@ try:
         dep_maps = config.get("dep_maps", {})
         if dep_maps.get("modules"):
             module_count = len(dep_maps["modules"])
+            plugin_root = os.environ.get("HOOK_PLUGIN_ROOT", "")
+            project_root = os.environ.get("HOOK_PROJECT_ROOT", "")
+            scripts_dir = os.path.join(plugin_root, "skills", "look-before-you-leap", "scripts")
             profile_parts.append(
                 f"Dep maps: configured ({module_count} modules) — "
-                f"query with deps-query.py during exploration"
+                f"query during exploration with:\n"
+                f"  `python3 {scripts_dir}/deps-query.py {project_root} <file_path>`\n"
+                f"  Generate/refresh: `python3 {scripts_dir}/deps-generate.py {project_root} --stale-only`"
             )
         if profile_parts:
             project_profile = "**Project Profile** (auto-detected, edit .claude/look-before-you-leap.local.md to customize):\n" + "\n".join(f"- {p}" for p in profile_parts)

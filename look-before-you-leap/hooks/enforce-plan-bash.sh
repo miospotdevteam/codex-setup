@@ -85,8 +85,14 @@ WRITE_PATTERNS = [
     r"\bperl\b.*\bopen\b",                       # perl -e "open(F,'>file')..."
 ]
 
+# Strip safe redirect patterns before checking (these don't create/modify real files)
+# - Redirects to /dev/null: >/dev/null, 2>/dev/null, &>/dev/null, >>/dev/null, etc.
+# - FD duplications: 2>&1, 1>&2
+cmd_for_check = re.sub(r'\d*&?>>?\s*/dev/null\b', '', cmd)
+cmd_for_check = re.sub(r'\d+>&\d+', '', cmd_for_check)
+
 for pattern in WRITE_PATTERNS:
-    if re.search(pattern, cmd):
+    if re.search(pattern, cmd_for_check):
         print("yes")
         sys.exit(0)
 
