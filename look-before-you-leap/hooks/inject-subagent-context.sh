@@ -138,10 +138,19 @@ if stack_info:
 
 dep_maps = project_config.get("dep_maps", {})
 if dep_maps and dep_maps.get("modules"):
+    project_root = os.environ.get("HOOK_PROJECT_ROOT", "")
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+    scripts_dir = os.path.join(plugin_root, "skills", "look-before-you-leap", "scripts") if plugin_root else ""
+    module_count = len(dep_maps["modules"])
     base_rules.append(
-        "- Dep maps configured: use deps-query.py for consumer/blast-radius "
-        "analysis instead of manual grep"
+        f"- Dep maps configured ({module_count} modules): use deps-query.py for "
+        "consumer/blast-radius analysis instead of manual grep. "
+        "Shows IMPORTS (what a file depends on) and DEPENDENTS (who depends on it)."
     )
+    if scripts_dir and project_root:
+        base_rules.append(
+            f"  Command: `python3 {scripts_dir}/deps-query.py {project_root} <file_path>`"
+        )
 
 preamble_lines = list(base_rules)
 if category == "research":

@@ -32,9 +32,10 @@ When you open a file to change it, also read:
 
 - **Its imports** — what does it depend on? Are there shared utilities,
   types, or constants you should know about?
-- **Its consumers** — who imports THIS file? Use grep/ripgrep to find all
-  import statements referencing it. If you change an export, every consumer
-  is affected.
+- **Its consumers** — who imports THIS file? If dep maps are configured
+  (check the project profile for the command), use `deps-query.py` for
+  instant results; otherwise grep for import statements. If you change an
+  export, every consumer is affected.
 - **Sibling files** — how do adjacent files in the same directory solve
   similar problems? If there's already a pattern (naming, error handling,
   return types), follow it.
@@ -119,7 +120,9 @@ When you modify any of these, you MUST check all consumers:
 
 The check process:
 
-1. Grep for the function/type/variable name across the project
+1. Find all consumers: if dep maps are configured, use `deps-query.py` to
+   get the DEPENDENTS list instantly; otherwise grep for the function/type/
+   variable name across the project
 2. Open every file that references it
 3. Verify each reference still works with your change
 4. If you changed a function signature, update every call site
@@ -262,7 +265,7 @@ If you catch yourself doing any of these, stop and reconsider:
 | Skipping a step because it's hard | Flag it explicitly to the user |
 | Declaring "done" without running checks | Run tsc/lint/tests first |
 | Using a package without checking package.json | Verify it's installed |
-| Changing a shared utility without checking consumers | Grep for all usages |
+| Changing a shared utility without checking consumers | Use deps-query.py (if configured) or grep for all usages |
 | Summarizing without mentioning what you skipped | List gaps explicitly |
 | Fixing one bug instance without checking for more | Self-audit for the pattern |
 | Implementing from scratch | Search for existing utilities first |
