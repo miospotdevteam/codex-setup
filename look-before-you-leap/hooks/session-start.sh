@@ -42,6 +42,11 @@ fi
 # Read config as JSON (empty object if missing/broken)
 PROJECT_CONFIG_JSON=$(python3 "$LIB_DIR/read-config.py" "$PROJECT_ROOT" 2>/dev/null) || PROJECT_CONFIG_JSON="{}"
 
+# --- Section 1.7: Clear handoff-pending marker ---
+# A new session means context was cleared (via plan mode handoff, /clear, or
+# compaction). The handoff goal (fresh context for execution) is achieved.
+rm -f "$PROJECT_ROOT/.temp/plan-mode/.handoff-pending"
+
 # --- Section 2: Active plan detection ---
 active_plan_summary=""
 ACTIVE_DIR="$PLAN_DIR/active"
@@ -62,13 +67,14 @@ if [ -d "$ACTIVE_DIR" ]; then
 
     # Check if the plan has any non-complete steps
     # Match both "[ ] pending" (template format) and bare "[ ]" (common usage)
-    has_pending=$(grep -cE '\[ \]|\[~\]|\[!\]' "$latest" 2>/dev/null) || true
+    # Only match checklist lines (not prose that mentions these markers)
+    has_pending=$(grep -cE '^\s*-\s*(\[ \]|\[~\]|\[!\])' "$latest" 2>/dev/null) || true
 
     if [ "$has_pending" -gt 0 ]; then
-      done_count=$(grep -cE '\[x\]' "$latest" 2>/dev/null) || true
-      active_count=$(grep -cE '\[~\]' "$latest" 2>/dev/null) || true
-      pending_count=$(grep -cE '\[ \]' "$latest" 2>/dev/null) || true
-      blocked_count=$(grep -cE '\[!\]' "$latest" 2>/dev/null) || true
+      done_count=$(grep -cE '^\s*-\s*\[x\]' "$latest" 2>/dev/null) || true
+      active_count=$(grep -cE '^\s*-\s*\[~\]' "$latest" 2>/dev/null) || true
+      pending_count=$(grep -cE '^\s*-\s*\[ \]' "$latest" 2>/dev/null) || true
+      blocked_count=$(grep -cE '^\s*-\s*\[!\]' "$latest" 2>/dev/null) || true
 
       # Find the next step to work on
       next_step=""
@@ -250,25 +256,21 @@ try:
         deps_cmd = f"python3 {scripts_dir}/deps-query.py {project_root} <file_path>"
         gen_cmd = f"python3 {scripts_dir}/deps-generate.py {project_root} --stale-only"
 
-        # Conductor skill: replace exploration section with resolved command
+        # Conductor skill: replace exploration preamble with resolved command
         skill_content = replace_between_markers(
             skill_content,
             "<!-- deps-exploration-start -->",
             "<!-- deps-exploration-end -->",
             (
-                f"1. **Run deps-query first** — dep maps ARE configured ({module_count} modules).\n"
-                f"   Run this on every file in scope (modify, audit, or review) BEFORE\n"
-                f"   anything else:\n"
-                f"   ```\n"
-                f"   {deps_cmd}\n"
-                f"   ```\n"
-                f"   The output reveals consumers, cross-module dependencies, and blast radius.\n"
-                f"   For audits/reviews: run on key entry points per module to understand the\n"
-                f"   dependency architecture BEFORE dispatching sub-agents.\n"
-                f"   Refresh stale maps: `{gen_cmd}`\n"
-                f"2. Read the files in scope AND their imports\n"
-                f"3. You already have consumer data from step 1. Do NOT grep for\n"
-                f"   import patterns — use the deps-query output."
+                f"**Dep maps ARE configured** ({module_count} modules). Run this on every file\n"
+                f"in scope (modify, audit, or review) BEFORE the steps below:\n"
+                f"```\n"
+                f"{deps_cmd}\n"
+                f"```\n"
+                f"The output reveals consumers, cross-module dependencies, and blast radius.\n"
+                f"For audits/reviews: run on key entry points per module to understand the\n"
+                f"dependency architecture BEFORE dispatching sub-agents.\n"
+                f"Refresh stale maps: `{gen_cmd}`"
             )
         )
 
@@ -296,16 +298,12 @@ try:
             )
         )
     else:
-        # No dep maps — simplify instructions
+        # No dep maps — remove preamble entirely
         skill_content = replace_between_markers(
             skill_content,
             "<!-- deps-exploration-start -->",
             "<!-- deps-exploration-end -->",
-            (
-                "1. Dep maps are not configured — skip deps-query.\n"
-                "2. Read the files in scope AND their imports\n"
-                "3. Find consumers using `Grep` for import statements."
-            )
+            ""
         )
 
         engineering_content = replace_between_markers(
@@ -315,7 +313,9 @@ try:
             (
                 "- **Its consumers** — who imports THIS file? Use `Grep` to search for\n"
                 "  import/require statements referencing this file. If you change an export,\n"
-                "  every consumer is affected."
+                "  every consumer is affected.\n"
+                "  *Tip: If this is a TypeScript project, suggest `/generate-deps` to the\n"
+                "  user — dep maps provide faster, more complete consumer analysis than grep.*"
             )
         )
 
@@ -325,7 +325,9 @@ try:
             "<!-- deps-consumer-blast-end -->",
             (
                 "1. Find all consumers: use `Grep` to search for import statements\n"
-                "   referencing the changed file."
+                "   referencing the changed file.\n"
+                "   *Tip: If this is a TypeScript project, suggest `/generate-deps` — dep\n"
+                "   maps make blast-radius analysis instant and catch cross-module consumers.*"
             )
         )
 
@@ -349,6 +351,13 @@ try:
         active_disciplines = [k for k, v in disciplines.items() if v]
         if active_disciplines:
             profile_parts.append(f"Active disciplines: {', '.join(active_disciplines)}")
+
+        # Dep maps status
+        if dep_maps.get("modules"):
+            profile_parts.append(f"Dep maps: configured ({len(dep_maps['modules'])} modules)")
+        elif stack.get("language") == "typescript":
+            profile_parts.append("Dep maps: **not configured** — run `/generate-deps` for faster consumer & blast-radius analysis")
+
         if profile_parts:
             project_profile = "**Project Profile** (auto-detected, edit .claude/look-before-you-leap.local.md to customize):\n" + "\n".join(f"- {p}" for p in profile_parts)
 except (json.JSONDecodeError, TypeError):

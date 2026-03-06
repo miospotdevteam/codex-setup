@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: "Use when encountering any bug, test failure, or unexpected behavior. Enforces root cause investigation before fixes. Four phases: investigate, analyze patterns, form hypotheses, implement. Prevents guess-and-check thrashing. Use ESPECIALLY when under pressure or when 'just one quick fix' seems obvious."
+description: "Use when encountering any bug, test failure, or unexpected behavior. Enforces root cause investigation before fixes. Four phases: investigate, analyze patterns, form hypotheses, implement. Prevents guess-and-check thrashing. Use ESPECIALLY when under pressure or when 'just one quick fix' seems obvious. Do NOT use for: learning unfamiliar APIs (use exploration), performance optimization without a specific regression, or code review without a reported bug."
 ---
 
 # Systematic Debugging
@@ -28,6 +28,29 @@ behavior, performance problems, build failures, integration issues.
 - "Just one quick fix" seems obvious
 - You've already tried multiple fixes
 - You don't fully understand the issue
+
+## Boundaries & Safety
+
+**Must not:**
+- Commit debug instrumentation (temporary logs, print statements). Remove
+  all before declaring done.
+- Make destructive changes to reproduce a bug without user confirmation
+  (dropping data, deleting files, resetting state, truncating tables).
+- Modify shared infrastructure, production config, or environment files
+  as part of debugging without user confirmation.
+- Scope-creep fixes beyond the root cause — no "while I'm here" cleanup.
+
+**User confirmation required before:**
+- Attempting a 4th fix (existing rule in Phase 4.5 — elevated here)
+- Adding persistent instrumentation (logging that stays in production code)
+- Modifying database schema, environment config, or CI pipelines to debug
+- Reverting commits or resetting branches
+
+**Agent may proceed autonomously:**
+- Adding and removing temporary debug logging within a single session
+- Reading any file, running any read-only diagnostic command
+- Running existing tests, build commands, type checkers
+- Making the single fix that addresses the confirmed root cause
 
 ---
 
@@ -123,6 +146,13 @@ however small. Don't assume "that can't matter."
 What other components does this need? What settings, config, environment?
 What assumptions does it make?
 
+If dep maps are configured (check the project profile), run `deps-query.py`
+on the buggy file to see its full dependency chain and all consumers. This
+reveals: which modules feed data into the buggy code (potential upstream
+causes), and which consumers are affected (blast radius of the bug and fix).
+If dep maps are not configured and this is a TypeScript project, suggest
+`/generate-deps` to the user — it makes dependency tracing instant.
+
 ---
 
 ## Phase 3: Hypothesis and Testing
@@ -154,8 +184,9 @@ or add more instrumentation.
 
 ### 1. Create a failing test
 
-Write the simplest possible test that reproduces the bug. Use the
-`look-before-you-leap:test-driven-development` skill for this.
+Write the simplest possible test that reproduces the bug. Use the Red
+phase from `look-before-you-leap:test-driven-development` to write a
+failing test that captures the bug.
 
 A test proves the bug exists, proves the fix works, and prevents
 regression. Never fix bugs without a test.
@@ -192,6 +223,18 @@ the signature of an architectural mismatch.
 Discuss with the user before attempting more fixes. This is not a failed
 hypothesis — this is a wrong architecture.
 
+### Acceptance Criteria
+
+Before declaring a debugging task done, ALL must be true:
+
+- [ ] Root cause identified and documented (not just "it works now")
+- [ ] Failing test written that reproduces the original bug
+- [ ] Fix addresses root cause, not symptom
+- [ ] All existing tests pass (including the new regression test)
+- [ ] No debug instrumentation left in code
+- [ ] Defense-in-depth validation added where appropriate
+- [ ] No unrelated changes introduced
+
 ---
 
 ## Red Flags — STOP and Return to Phase 1
@@ -210,6 +253,8 @@ hypothesis — this is a wrong architecture.
 ---
 
 ## Supporting References
+
+All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`.
 
 | Reference | When to use |
 |---|---|
