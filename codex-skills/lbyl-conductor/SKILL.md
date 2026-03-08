@@ -128,6 +128,24 @@ bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
 obvious single-line change.
 
+### Plan review via Orbit
+
+Present each newly written `masterPlan.md` through Orbit before starting
+source edits:
+
+1. Call `orbit_generate_resolved` with the absolute `masterPlan.md` path.
+2. Tell the user the plan is open in VS Code for review and they can comment,
+   approve, or request changes there.
+3. Use `orbit_get_review_state` and `orbit_list_threads` with `status: "open"`
+   to inspect review state after the user responds or when they ask for status.
+4. If the plan needs changes, update `masterPlan.md`, reply on each handled
+   thread with `orbit_reply`, resolve completed threads with
+   `orbit_resolve_thread`, regenerate the resolved artifact, and loop.
+5. Start execution only after the plan is approved or the user explicitly says
+   to skip Orbit review.
+6. If an Orbit action fails unexpectedly, treat that as a setup problem to
+   surface to the user. Do not silently fall back to a non-Orbit review path.
+
 ---
 
 ## Step 3: Execute (the loop)

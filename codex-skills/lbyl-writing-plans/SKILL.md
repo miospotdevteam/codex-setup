@@ -182,14 +182,27 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
 ```
 ````
 
-### 4. Hand off to execution
+### 4. Present for review, then hand off to execution
 
 After saving the masterPlan to disk:
 
 1. Read the masterPlan back from disk.
-2. Summarize the plan to the user with the key steps, files involved, and
-   acceptance criteria.
-3. Proceed unless the user explicitly asks to revise the plan first.
+2. Call `orbit_generate_resolved` with the absolute `masterPlan.md` path so
+   the plan opens in VS Code as a reviewable artifact.
+3. Tell the user the plan is ready for Orbit review in VS Code and wait for
+   them to approve it, request changes, or ask you to check status.
+4. Inspect the review with `orbit_get_review_state` and `orbit_list_threads`
+   using `status: "open"`.
+5. If there are requested changes or open threads that require action, update
+   `masterPlan.md`, answer each addressed thread with `orbit_reply`, resolve
+   completed threads with `orbit_resolve_thread`, regenerate the resolved
+   artifact, and loop until approval.
+6. Once approved, summarize the plan to the user with key steps, files
+   involved, and acceptance criteria.
+7. Proceed unless the user explicitly asks to revise the plan first or to skip
+   Orbit review.
+8. If an Orbit action fails unexpectedly, stop and surface the setup problem
+   instead of silently falling back to a non-Orbit review path.
 
 The masterPlan is still the source of truth. During execution, follow
 `lbyl-persistent-plans` and update the plan on disk every 2-3 file edits.
@@ -206,8 +219,9 @@ This skill must NOT:
   If you find gaps, go back to Step 1 (Explore) first.
 - **Overwrite an existing masterPlan.md without user consent** — if a plan
   already exists in the target directory, ask before replacing it.
-- **Hide a non-trivial plan from the user** — summarize the plan before
-  execution unless they explicitly said to skip plan review.
+- **Hide a non-trivial plan from the user** — present it through Orbit and
+  summarize it before execution unless they explicitly said to skip Orbit
+  review.
 - **Write implementation code** — this skill produces plans, not code files.
   Code belongs in the plan's code blocks, not in the project source tree.
 

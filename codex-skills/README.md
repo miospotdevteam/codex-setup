@@ -21,10 +21,33 @@ Codex-native port of the `look-before-you-leap` discipline system.
 bash scripts/install-codex-skills.sh
 ```
 
-Or copy them manually:
+The repo installer installs this Codex-native pack and the upstream skills
+under `look-before-you-leap/skills/`, except upstream `frontend-design`. The
+upstream source stays in the repo for sync, but installed Codex sessions use
+`lbyl-frontend-design` as the single standard frontend design skill.
+
+If a local Orbit checkout is available, the same installer also configures the
+`orbit` MCP server in Codex and refreshes the Orbit VS Code extension so Orbit
+review tools are available at startup in future Codex sessions.
+
+To install the skill pack without Orbit:
 
 ```bash
-cp -R codex-skills/lbyl-* ~/.codex/skills/
+SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To bootstrap Orbit only:
+
+```bash
+bash scripts/install-orbit-codex-integration.sh
+```
+
+To copy the full repo inventory manually:
+
+```bash
+cp -R codex-skills/* ~/.codex/skills/
+cp -R look-before-you-leap/skills/* ~/.codex/skills/
+rm -rf ~/.codex/skills/frontend-design
 ```
 
 ## Usage
@@ -40,7 +63,11 @@ Ask for the skills explicitly:
 ## Codex-specific notes
 
 - There are no Claude plugin hooks here. The discipline is carried by the
-  skill text, local `AGENTS.md`, and on-disk plans.
+  skill text, local `AGENTS.md`, on-disk plans, and Orbit-backed MCP review
+  tooling.
 - The conductor assumes the companion skills are active for coding work.
 - Persistent plans live in `.temp/plan-mode/active/`.
 - Dep maps, when used, are configured from `.codex/lbyl-deps.json`.
+- In the default Codex workflow for this repo, new plan artifacts go through
+  Orbit review in VS Code before execution proceeds unless the user explicitly
+  skips that review.

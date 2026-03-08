@@ -36,13 +36,45 @@ codex-skills/           Codex-native skill pack
 scripts/                install helpers for Codex
 ```
 
-## Install the Codex skills
+## Install the repo skills
 
 ```bash
 bash scripts/install-codex-skills.sh
 ```
 
-This installs the `lbyl-*` skills into `~/.codex/skills/`.
+This installs the full Codex-native pack plus the upstream skills from:
+
+- `codex-skills/`
+- `look-before-you-leap/skills/`
+
+into `~/.codex/skills/`, except the upstream `frontend-design` skill. That
+source stays in the repo for sync, but installed Codex sessions use
+`lbyl-frontend-design` as the single standard frontend design skill.
+`immersive-frontend` remains available for motion-heavy frontend work. The
+`lbyl-*` skills remain the Codex-native defaults for coding work.
+
+If a local Orbit repo is available at `~/Projects/orbit` or `~/projects/orbit`,
+the installer also:
+
+- builds the local Orbit MCP server when needed
+- packages and installs the local VS Code extension when `code` is available
+- registers a global Codex MCP server named `orbit`
+
+That makes Orbit tools available automatically in future Codex sessions at
+startup via `~/.codex/config.toml`.
+
+To skip Orbit during a skill install:
+
+```bash
+SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To bootstrap Orbit separately or point at a non-default checkout:
+
+```bash
+bash scripts/install-orbit-codex-integration.sh
+ORBIT_DIR=/absolute/path/to/orbit bash scripts/install-orbit-codex-integration.sh
+```
 
 ## Use in Codex
 
@@ -52,6 +84,7 @@ Typical prompts:
 - `Use lbyl-conductor and lbyl-engineering-discipline for this task.`
 - `Use lbyl-writing-plans, then execute with lbyl-persistent-plans.`
 - `Use lbyl-systematic-debugging for this failure.`
+- `Use immersive-frontend for this motion-heavy landing page.`
 
 For coding work, the expected default is:
 
@@ -59,6 +92,10 @@ For coding work, the expected default is:
 - write `.temp/plan-mode/active/<plan-name>/masterPlan.md` before source edits
 - update the plan every 2-3 file edits
 - run relevant verification before declaring done
+
+By default, the Codex skill pack presents new plans through Orbit for review
+in VS Code before execution starts unless the user explicitly skips that
+review.
 
 ## Sync policy
 
