@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LBYL for Codex | Public Plugin Mockup</title>
+    <meta
+      name="description"
+      content="A public mockup page for the Look Before You Leap Codex plugin, presented as a disciplined engineering control surface."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Oxanium:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #08101f;
+        --bg-alt: #0d1730;
+        --panel: rgba(17, 27, 53, 0.88);
+        --panel-strong: rgba(18, 33, 67, 0.96);
+        --line: rgba(105, 141, 221, 0.24);
+        --line-strong: rgba(124, 199, 255, 0.42);
+        --text: #e6f3ff;
+        --muted: #8ca4cc;
+        --signal: #35d2c6;
+        --signal-soft: rgba(53, 210, 198, 0.16);
+        --ion: #7ea0ff;
+        --alert: #ff7a59;
+        --glow: rgba(53, 210, 198, 0.32);
+        --shadow: 0 24px 80px rgba(4, 10, 24, 0.55);
+        --radius-lg: 32px;
+        --radius-md: 22px;
+        --radius-sm: 16px;
+        --max: 1240px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        font-family: "IBM Plex Sans", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(126, 160, 255, 0.18), transparent 28%),
+          radial-gradient(circle at 82% 18%, rgba(53, 210, 198, 0.12), transparent 22%),
+          linear-gradient(180deg, #09111f 0%, #08101f 30%, #091427 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(125, 160, 255, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(125, 160, 255, 0.05) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        opacity: 0.55;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      img,
+      svg {
+        display: block;
+        max-width: 100%;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .shell {
+        position: relative;
+        overflow: clip;
+      }
+
+      .shell::before,
+      .shell::after {
+        content: "";
+        position: absolute;
+        inset: auto;
+        width: 46rem;
+        height: 46rem;
+        border-radius: 50%;
+        filter: blur(70px);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .shell::before {
+        top: -10rem;
+        right: -18rem;
+        background: rgba(53, 210, 198, 0.08);
+      }
+
+      .shell::after {
+        top: 48rem;
+        left: -18rem;
+        background: rgba(126, 160, 255, 0.1);
+      }
+
+      .topbar,
+      .section {
+        position: relative;
+        z-index: 2;
+        width: min(calc(100% - 2rem), var(--max));
+        margin: 0 auto;
+      }
+
+      main {
+        position: relative;
+        z-index: 1;
+      }
+
+      .page-network {
+        position: absolute;
+        top: 27rem;
+        left: 50%;
+        z-index: 0;
+        width: min(calc(100% - 2rem), var(--max));
+        transform: translateX(-50%);
+        pointer-events: none;
+        opacity: 0.72;
+      }
+
+      .page-network svg {
+        width: 100%;
+        height: 175rem;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.1rem 0 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.9rem;
+        font-family: "Oxanium", sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 2.6rem;
+        height: 2.6rem;
+        border: 1px solid rgba(126, 160, 255, 0.32);
+        border-radius: 0.9rem;
+        background: linear-gradient(180deg, rgba(126, 160, 255, 0.14), rgba(53, 210, 198, 0.08));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: var(--signal);
+      }
+
+      .brand-mark::before {
+        inset: 0.55rem 1.35rem 0.55rem 0.55rem;
+        opacity: 0.92;
+      }
+
+      .brand-mark::after {
+        inset: 0.55rem 0.55rem 1.35rem 1.35rem;
+        background: var(--ion);
+      }
+
+      .topbar nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+
+      .topbar nav a {
+        padding: 0.72rem 1rem;
+        border: 1px solid rgba(126, 160, 255, 0.16);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+      }
+
+      .topbar nav a:hover,
+      .topbar nav a:focus-visible {
+        border-color: rgba(53, 210, 198, 0.46);
+        color: var(--text);
+        background: rgba(53, 210, 198, 0.08);
+        outline: none;
+      }
+
+      .hero {
+        padding: 5.2rem 0 3rem;
+      }
+
+      .hero-shell {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.04fr) minmax(320px, 0.96fr);
+        gap: 0;
+        min-height: 100%;
+        background:
+          linear-gradient(180deg, rgba(20, 32, 62, 0.94), rgba(11, 19, 38, 0.96)),
+          radial-gradient(circle at 70% 40%, rgba(53, 210, 198, 0.08), transparent 34%);
+        border: 1px solid rgba(118, 149, 223, 0.18);
+        border-radius: calc(var(--radius-lg) + 4px);
+        box-shadow: var(--shadow);
+        overflow: clip;
+      }
+
+      .hero-shell::before {
+        content: "";
+        position: absolute;
+        inset: 1.1rem;
+        border-radius: calc(var(--radius-lg) - 6px);
+        border: 1px solid rgba(126, 160, 255, 0.08);
+        pointer-events: none;
+      }
+
+      .hero-shell::after {
+        content: "";
+        position: absolute;
+        left: calc(50% - 1px);
+        top: 2rem;
+        bottom: 2rem;
+        width: 1px;
+        background: linear-gradient(
+          180deg,
+          rgba(53, 210, 198, 0.04),
+          rgba(126, 160, 255, 0.32) 20%,
+          rgba(53, 210, 198, 0.18) 55%,
+          rgba(255, 122, 89, 0.05)
+        );
+        pointer-events: none;
+      }
+
+      .hero-copy {
+        position: relative;
+        padding: clamp(1.75rem, 3vw, 2.7rem);
+        z-index: 1;
+      }
+
+      .eyebrow,
+      .panel-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.55rem 0.9rem;
+        border: 1px solid rgba(53, 210, 198, 0.22);
+        border-radius: 999px;
+        background: rgba(53, 210, 198, 0.08);
+        color: #b4fff9;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before,
+      .panel-kicker::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--signal);
+        box-shadow: 0 0 0.8rem var(--glow);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: "Oxanium", sans-serif;
+        letter-spacing: 0.02em;
+      }
+
+      h1 {
+        margin-top: 1.25rem;
+        font-size: clamp(2.9rem, 6vw, 5.8rem);
+        line-height: 0.94;
+        max-width: 12ch;
+      }
+
+      .hero-copy p {
+        max-width: 62ch;
+        margin: 1.35rem 0 0;
+        font-size: 1.06rem;
+        line-height: 1.8;
+        color: var(--muted);
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        margin-top: 1.7rem;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 3.1rem;
+        padding: 0.9rem 1.3rem;
+        border-radius: 1rem;
+        font-weight: 600;
+        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      }
+
+      .button-primary {
+        background: linear-gradient(135deg, rgba(53, 210, 198, 0.22), rgba(126, 160, 255, 0.22));
+        border: 1px solid rgba(53, 210, 198, 0.35);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+
+      .button-secondary {
+        border: 1px solid rgba(126, 160, 255, 0.25);
+        background: rgba(126, 160, 255, 0.08);
+        color: var(--text);
+      }
+
+      .button:hover,
+      .button:focus-visible {
+        transform: translateY(-2px);
+        outline: none;
+      }
+
+      .hero-foot {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.9rem;
+        margin-top: 1.8rem;
+      }
+
+      .hero-stat {
+        padding: 1rem 1rem 1.1rem;
+        border: 1px solid rgba(126, 160, 255, 0.14);
+        border-radius: var(--radius-sm);
+        background: rgba(7, 14, 28, 0.42);
+      }
+
+      .hero-stat strong {
+        display: block;
+        font-family: "Oxanium", sans-serif;
+        font-size: 1.55rem;
+      }
+
+      .hero-stat span {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      .hero-visual {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto 1fr auto auto;
+        gap: 1rem;
+        min-height: 32rem;
+        padding: 2rem 2rem 2rem 1.6rem;
+        background:
+          linear-gradient(180deg, rgba(12, 21, 42, 0.34), rgba(9, 17, 35, 0.16)),
+          radial-gradient(circle at center, rgba(53, 210, 198, 0.08), transparent 60%);
+      }
+
+      .visual-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        color: var(--muted);
+        font-size: 0.84rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .lights {
+        display: inline-flex;
+        gap: 0.45rem;
+      }
+
+      .lights span {
+        width: 0.62rem;
+        height: 0.62rem;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .lights span:nth-child(1) {
+        background: rgba(255, 122, 89, 0.72);
+      }
+
+      .lights span:nth-child(2) {
+        background: rgba(248, 210, 70, 0.72);
+      }
+
+      .lights span:nth-child(3) {
+        background: rgba(53, 210, 198, 0.72);
+      }
+
+      .visual-grid {
+        min-height: 0;
+      }
+
+      .visual-diagram {
+        border-top: 1px solid rgba(126, 160, 255, 0.16);
+        border-left: 1px solid rgba(126, 160, 255, 0.12);
+        border-radius: 1.25rem 1.25rem 1.25rem 0.85rem;
+        background: rgba(6, 12, 25, 0.4);
+        overflow: clip;
+      }
+
+      .visual-diagram {
+        position: relative;
+        padding: 1rem;
+      }
+
+      .visual-diagram svg {
+        width: 100%;
+        height: 100%;
+        min-height: 21rem;
+      }
+
+      .trace-line {
+        stroke-dasharray: 12 18;
+        animation: routeShift 12s linear infinite;
+      }
+
+      .pulse-core {
+        animation: pulseGlow 2.8s ease-in-out infinite;
+        transform-origin: center;
+      }
+
+      .ring {
+        animation: ringSweep 10s linear infinite;
+        transform-origin: center;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1rem 0;
+      }
+
+      .label {
+        display: block;
+        color: #b4fff9;
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .metric-card p,
+      .feature-card p,
+      .skill-card p,
+      .timeline-copy p,
+      .cta-copy p {
+        margin: 0.45rem 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .hero-signal-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+
+      .signal-mini {
+        padding: 0.95rem 1rem 1rem;
+        border-top: 1px solid rgba(126, 160, 255, 0.16);
+        border-left: 1px solid rgba(126, 160, 255, 0.12);
+        border-radius: 1rem 1rem 1rem 0.75rem;
+        background: rgba(8, 14, 28, 0.36);
+      }
+
+      .signal-mini p {
+        margin: 0.45rem 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.92rem;
+      }
+
+      .visual-tail {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid rgba(126, 160, 255, 0.16);
+        border-radius: 999px;
+        background: rgba(126, 160, 255, 0.07);
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .chip::before {
+        content: "";
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .section {
+        padding: 1.3rem 0 4.7rem;
+      }
+
+      .section + .section {
+        margin-top: -1.7rem;
+      }
+
+      .section-header {
+        padding: 0 0 1.2rem;
+      }
+
+      .section-header p {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        line-height: 1.8;
+        max-width: 62ch;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .metric-card,
+      .feature-card,
+      .skill-card,
+      .timeline-card,
+      .cta-card {
+        padding: 1.25rem;
+        border-top: 1px solid rgba(126, 160, 255, 0.18);
+        border-left: 1px solid rgba(126, 160, 255, 0.14);
+        border-right: 0;
+        border-bottom: 0;
+        border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0.9rem;
+        background: linear-gradient(180deg, rgba(16, 25, 48, 0.72), rgba(10, 18, 35, 0.52));
+        box-shadow: 0 18px 48px rgba(4, 10, 24, 0.32);
+      }
+
+      .metric-card strong {
+        display: block;
+        font-family: "Oxanium", sans-serif;
+        font-size: 2.3rem;
+        color: #ffffff;
+      }
+
+      .metric-card em {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 0.85rem;
+        padding: 0.32rem 0.58rem;
+        border-radius: 999px;
+        background: var(--signal-soft);
+        color: #bffef7;
+        font-style: normal;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+        gap: 1rem;
+        align-items: start;
+        position: relative;
+      }
+
+      .feature-stack,
+      .skills-grid {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .feature-card {
+        position: relative;
+        overflow: clip;
+      }
+
+      .feature-card::after {
+        content: "";
+        position: absolute;
+        inset: auto -2rem -2rem auto;
+        width: 7rem;
+        height: 7rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(53, 210, 198, 0.16), transparent 72%);
+        pointer-events: none;
+      }
+
+      .feature-stack {
+        position: relative;
+        z-index: 1;
+      }
+
+      .feature-card h3,
+      .skill-card h3,
+      .timeline-copy h3,
+      .cta-copy h2 {
+        font-size: 1.35rem;
+      }
+
+      .feature-line {
+        margin-top: 1rem;
+        height: 5rem;
+      }
+
+      .feature-line path {
+        stroke-dasharray: 10 14;
+        animation: routeShift 9s linear infinite;
+      }
+
+      .section-board {
+        position: relative;
+        min-height: 100%;
+        padding: 0.4rem 0 0 0;
+      }
+
+      .section-board svg {
+        width: 100%;
+        min-height: 26rem;
+        height: 100%;
+      }
+
+      .section-board::before {
+        content: "";
+        position: absolute;
+        left: 8%;
+        right: 0;
+        top: 14%;
+        bottom: 12%;
+        border-top: 1px solid rgba(126, 160, 255, 0.14);
+        border-left: 1px solid rgba(126, 160, 255, 0.12);
+        border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+        pointer-events: none;
+      }
+
+      .skills-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .skill-card {
+        min-height: 100%;
+      }
+
+      .skill-card .label {
+        color: #ffc4b6;
+      }
+
+      .skill-card ul {
+        margin: 1rem 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .skill-card li {
+        position: relative;
+        padding-left: 1rem;
+        margin-top: 0.8rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .skill-card li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.55rem;
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 50%;
+        background: var(--signal);
+      }
+
+      .timeline-card {
+        display: grid;
+        grid-template-columns: 0.88fr 1.12fr;
+        gap: 1.2rem;
+        align-items: stretch;
+        margin-top: 0.6rem;
+      }
+
+      .timeline-diagram {
+        position: relative;
+        border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0.9rem;
+        border-top: 1px solid rgba(126, 160, 255, 0.14);
+        border-left: 1px solid rgba(126, 160, 255, 0.14);
+        background: linear-gradient(180deg, rgba(7, 14, 27, 0.68), rgba(10, 17, 32, 0.8));
+        padding: 1rem;
+      }
+
+      .timeline-diagram svg {
+        width: 100%;
+        height: 100%;
+        min-height: 20rem;
+      }
+
+      .timeline-list {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .timeline-item {
+        padding: 1rem 1rem 1rem 1.15rem;
+        border-left: 2px solid rgba(53, 210, 198, 0.35);
+        background: rgba(255, 255, 255, 0.015);
+        border-radius: 0 1rem 1rem 0;
+      }
+
+      .timeline-item strong {
+        display: block;
+        font-size: 1rem;
+      }
+
+      .timeline-item span {
+        display: block;
+        margin-top: 0.35rem;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .cta-card {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+        gap: 1rem;
+        overflow: clip;
+        margin-top: 0.75rem;
+      }
+
+      .cta-copy {
+        padding-right: 1rem;
+      }
+
+      .cta-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+        margin-top: 1.4rem;
+      }
+
+      .cta-meta div {
+        padding: 1rem;
+        border-top: 1px solid rgba(126, 160, 255, 0.14);
+        border-left: 1px solid rgba(126, 160, 255, 0.12);
+        border-radius: 1rem 1rem 1rem 0.8rem;
+        background: rgba(8, 14, 26, 0.36);
+      }
+
+      .cta-visual {
+        position: relative;
+        min-height: 20rem;
+        border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0.9rem;
+        border-top: 1px solid rgba(126, 160, 255, 0.14);
+        border-left: 1px solid rgba(126, 160, 255, 0.14);
+        background:
+          radial-gradient(circle at center, rgba(53, 210, 198, 0.1), transparent 44%),
+          linear-gradient(180deg, rgba(10, 19, 37, 0.96), rgba(7, 14, 26, 0.92));
+        overflow: clip;
+      }
+
+      .cta-visual svg {
+        width: 100%;
+        height: 100%;
+        min-height: 20rem;
+      }
+
+      .footer {
+        width: min(calc(100% - 2rem), var(--max));
+        margin: 0 auto;
+        padding: 0 0 3rem;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 720ms ease, transform 720ms ease;
+      }
+
+      .reveal.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .delay-1 {
+        transition-delay: 80ms;
+      }
+
+      .delay-2 {
+        transition-delay: 160ms;
+      }
+
+      .delay-3 {
+        transition-delay: 240ms;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @keyframes routeShift {
+        to {
+          stroke-dashoffset: -160;
+        }
+      }
+
+      @keyframes pulseGlow {
+        0%,
+        100% {
+          transform: scale(0.92);
+          opacity: 0.8;
+        }
+        50% {
+          transform: scale(1.08);
+          opacity: 1;
+        }
+      }
+
+      @keyframes ringSweep {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (max-width: 1100px) {
+        .hero,
+        .split,
+        .timeline-card,
+        .cta-card,
+        .visual-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-shell::after {
+          left: 2rem;
+          right: 2rem;
+          top: auto;
+          bottom: calc(50% - 1px);
+          width: auto;
+          height: 1px;
+        }
+
+        .skills-grid,
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero-signal-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-foot {
+          grid-template-columns: 1fr;
+        }
+
+        .cta-copy {
+          padding-right: 0;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .topbar nav {
+          width: 100%;
+        }
+
+        .topbar nav a {
+          flex: 1 1 auto;
+          text-align: center;
+        }
+
+        .hero {
+          padding-top: 4rem;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .metric-card,
+        .feature-card,
+        .skill-card,
+        .timeline-card,
+        .cta-card {
+          padding: 1.1rem;
+        }
+
+        .section + .section {
+          margin-top: -0.5rem;
+        }
+
+        .page-network {
+          display: none;
+        }
+
+        .metrics,
+        .skills-grid,
+        .cta-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition-duration: 0.01ms !important;
+          transition-delay: 0ms !important;
+        }
+
+        .reveal {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar" aria-label="Primary">
+        <a class="brand" href="#top">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>LBYL / Codex</span>
+        </a>
+        <nav>
+          <a href="#why">Why It Exists</a>
+          <a href="#skills">Skill Set</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#install">Install</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <div class="page-network" aria-hidden="true">
+          <svg viewBox="0 0 1240 2800">
+            <defs>
+              <linearGradient id="pageRail" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#35d2c6" />
+                <stop offset="45%" stop-color="#7ea0ff" />
+                <stop offset="100%" stop-color="#ff7a59" />
+              </linearGradient>
+            </defs>
+            <path class="trace-line" d="M96 186C238 186 278 284 420 284H780C928 284 956 398 1090 398" fill="none" stroke="url(#pageRail)" stroke-width="5" stroke-linecap="round" />
+            <path class="trace-line" style="animation-duration: 14s" d="M1090 398V892C1090 978 1004 980 940 980H514C430 980 398 1058 398 1138V1568" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+            <path class="trace-line" style="animation-duration: 11s" d="M398 1568C398 1686 512 1702 596 1702H948C1030 1702 1082 1776 1082 1862V2330" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+            <path class="trace-line" style="animation-duration: 16s" d="M146 680H334C408 680 430 758 512 758H760C834 758 860 846 946 846H1100" fill="none" stroke="url(#pageRail)" stroke-width="4" stroke-linecap="round" />
+            <circle class="pulse-core" cx="420" cy="284" r="7" fill="#35d2c6" />
+            <circle class="pulse-core" style="animation-delay: 0.9s" cx="940" cy="980" r="7" fill="#7ea0ff" />
+            <circle class="pulse-core" style="animation-delay: 1.6s" cx="596" cy="1702" r="7" fill="#ff7a59" />
+          </svg>
+        </div>
+
+        <section class="section hero">
+          <div class="hero-shell reveal is-visible">
+            <div class="hero-copy">
+              <span class="eyebrow">Public Plugin Mockup</span>
+              <h1>Engineering discipline, rendered as a live control surface.</h1>
+              <p>
+                Look Before You Leap for Codex turns planning, verification, and
+                skill routing into a visible operating layer. It is built for
+                teams that want the model to stop improvising and start working
+                like a careful engineer.
+              </p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="#install">View install path</a>
+                <a class="button button-secondary" href="#skills">Inspect the skill pack</a>
+              </div>
+              <div class="hero-foot" aria-label="Key outcomes">
+                <div class="hero-stat">
+                  <strong>11+</strong>
+                  <span>Codex-native `lbyl-*` skills for planning, debugging, refactoring, and design.</span>
+                </div>
+                <div class="hero-stat">
+                  <strong>2-layer</strong>
+                  <span>Conductor plus engineering discipline, backed by persistent plans on disk.</span>
+                </div>
+                <div class="hero-stat">
+                  <strong>Orbit</strong>
+                  <span>Plan review workflow so non-trivial work gets approved before edits begin.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-visual reveal delay-1 is-visible" aria-hidden="true">
+              <div class="visual-head">
+                <span>Execution Surface / session-guarded</span>
+                <div class="lights">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+
+              <div class="visual-grid">
+                <div class="visual-diagram">
+                  <svg viewBox="0 0 600 460" role="img" aria-labelledby="hero-diagram-title">
+                    <title id="hero-diagram-title">Signal map showing plans, skills, and verification routes</title>
+                    <defs>
+                      <linearGradient id="trace" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#35d2c6" />
+                        <stop offset="100%" stop-color="#7ea0ff" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="14" y="14" width="572" height="432" rx="24" fill="rgba(7,12,24,0.55)" stroke="rgba(124,199,255,0.16)" />
+                    <g opacity="0.25">
+                      <path d="M40 102H560" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M40 182H560" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M40 262H560" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M40 342H560" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M120 40V420" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M240 40V420" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M360 40V420" stroke="rgba(126,160,255,0.2)" />
+                      <path d="M480 40V420" stroke="rgba(126,160,255,0.2)" />
+                    </g>
+                    <g class="ring" opacity="0.8">
+                      <circle cx="190" cy="172" r="72" fill="none" stroke="rgba(53,210,198,0.22)" stroke-width="2" />
+                      <path d="M190 100A72 72 0 0 1 258 172" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                    </g>
+                    <g class="ring" style="animation-duration: 16s">
+                      <circle cx="430" cy="270" r="90" fill="none" stroke="rgba(126,160,255,0.18)" stroke-width="2" />
+                      <path d="M430 180A90 90 0 0 1 512 270" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+                    </g>
+                    <path class="trace-line" d="M110 308C164 308 154 250 212 250H330C376 250 396 208 438 208H510" fill="none" stroke="url(#trace)" stroke-width="5" stroke-linecap="round" />
+                    <path class="trace-line" style="animation-duration: 9s" d="M112 132H220C274 132 278 92 326 92H478" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                    <path class="trace-line" style="animation-duration: 14s" d="M188 190V252C188 290 228 308 258 308H428" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+                    <g class="pulse-core">
+                      <circle cx="110" cy="308" r="10" fill="#35d2c6" />
+                      <circle cx="110" cy="308" r="22" fill="rgba(53,210,198,0.18)" />
+                    </g>
+                    <g class="pulse-core" style="animation-delay: 0.6s">
+                      <circle cx="212" cy="250" r="8" fill="#ff7a59" />
+                      <circle cx="212" cy="250" r="18" fill="rgba(255,122,89,0.15)" />
+                    </g>
+                    <g class="pulse-core" style="animation-delay: 1.2s">
+                      <circle cx="430" cy="308" r="9" fill="#7ea0ff" />
+                      <circle cx="430" cy="308" r="20" fill="rgba(126,160,255,0.16)" />
+                    </g>
+                    <text x="76" y="78" fill="#b4fff9" font-family="IBM Plex Sans, sans-serif" font-size="14" letter-spacing="2">PLANNING</text>
+                    <text x="288" y="78" fill="#c6d4f7" font-family="IBM Plex Sans, sans-serif" font-size="14" letter-spacing="2">SKILL ROUTING</text>
+                    <text x="392" y="382" fill="#ffc4b6" font-family="IBM Plex Sans, sans-serif" font-size="14" letter-spacing="2">VERIFICATION</text>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="hero-signal-strip">
+                <div class="signal-mini">
+                  <span class="label">Discovery first</span>
+                  <p>Read scope, imports, consumers, and adjacent patterns before the model edits anything.</p>
+                </div>
+                <div class="signal-mini">
+                  <span class="label">Plans on disk</span>
+                  <p>Persist intent in `.temp/plan-mode/active/` so progress survives compaction instead of resetting.</p>
+                </div>
+                <div class="signal-mini">
+                  <span class="label">Verification required</span>
+                  <p>Typecheck, lint, tests, and blast-radius checks are part of done, not a cleanup step.</p>
+                </div>
+              </div>
+
+              <div class="visual-tail">
+                <span class="chip">Persistent plans</span>
+                <span class="chip">Orbit review</span>
+                <span class="chip">SVG-driven signals</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="why">
+          <div class="section-header reveal">
+            <div>
+              <span class="panel-kicker">Why it exists</span>
+              <h2>Built against the failure modes that make coding agents expensive.</h2>
+            </div>
+            <p>
+              The plugin is aimed at the familiar problems: shallow exploration,
+              dropped scope, shared-code edits without consumer checks, weak
+              typing, and work that cannot survive compaction. Instead of adding
+              more generic prompt text, it imposes an operating system.
+            </p>
+          </div>
+
+          <div class="metrics">
+            <article class="metric-card reveal">
+              <em>Failure mode</em>
+              <strong>Scope drift</strong>
+              <p>Rules that make silent scope cuts explicit and unacceptable.</p>
+            </article>
+            <article class="metric-card reveal delay-1">
+              <em>Failure mode</em>
+              <strong>Blind edits</strong>
+              <p>Mandatory exploration, consumer checks, and blast-radius review before touching shared code.</p>
+            </article>
+            <article class="metric-card reveal delay-2">
+              <em>Failure mode</em>
+              <strong>Context loss</strong>
+              <p>Plans are written to disk and updated throughout execution so work survives compaction.</p>
+            </article>
+            <article class="metric-card reveal delay-3">
+              <em>Failure mode</em>
+              <strong>Weak verification</strong>
+              <p>Completion means typecheck, lint, tests, and the relevant discipline checks are actually run.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="split">
+            <div class="feature-stack">
+              <article class="feature-card reveal">
+                <span class="panel-kicker">Conductor layer</span>
+                <h3>Route the task to the right discipline.</h3>
+                <p>
+                  The conductor is the top-level contract. It decides when the
+                  work needs planning, frontend design, TDD, systematic
+                  debugging, refactoring, or skill creation, then forces the
+                  right sequence.
+                </p>
+                <svg class="feature-line" viewBox="0 0 340 80" aria-hidden="true">
+                  <path d="M10 48H120C156 48 152 24 188 24H330" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                  <circle cx="120" cy="48" r="6" fill="#35d2c6" />
+                  <circle cx="188" cy="24" r="6" fill="#7ea0ff" />
+                </svg>
+              </article>
+
+              <article class="feature-card reveal delay-1">
+                <span class="panel-kicker">Plan integrity</span>
+                <h3>Make compaction survivable by default.</h3>
+                <p>
+                  Persistent plans are not optional. They live in the repo,
+                  become the execution source of truth, and are updated often
+                  enough that a fresh context window can resume cleanly.
+                </p>
+                <svg class="feature-line" viewBox="0 0 340 80" aria-hidden="true">
+                  <path d="M12 24H136C168 24 178 58 212 58H330" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+                  <circle cx="136" cy="24" r="6" fill="#7ea0ff" />
+                  <circle cx="212" cy="58" r="6" fill="#ff7a59" />
+                </svg>
+              </article>
+
+              <article class="feature-card reveal delay-2">
+                <span class="panel-kicker">Review gate</span>
+                <h3>Present the plan before implementation begins.</h3>
+                <p>
+                  Non-trivial work is meant to pass through Orbit review so the
+                  intent is frozen before execution. That makes the implementation
+                  legible to both the user and the model.
+                </p>
+                <svg class="feature-line" viewBox="0 0 340 80" aria-hidden="true">
+                  <path d="M12 60H150C188 60 188 18 234 18H330" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                  <circle cx="150" cy="60" r="6" fill="#35d2c6" />
+                  <circle cx="234" cy="18" r="6" fill="#ff7a59" />
+                </svg>
+              </article>
+            </div>
+
+            <div class="section-board reveal delay-1" aria-hidden="true">
+              <svg viewBox="0 0 620 520">
+                <defs>
+                  <linearGradient id="boardTrace" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#35d2c6" />
+                    <stop offset="100%" stop-color="#7ea0ff" />
+                  </linearGradient>
+                </defs>
+                <rect x="20" y="20" width="580" height="480" rx="28" fill="rgba(7,12,24,0.42)" stroke="rgba(126,160,255,0.16)" />
+                <rect x="60" y="72" width="174" height="104" rx="18" fill="rgba(18,30,58,0.9)" stroke="rgba(53,210,198,0.24)" />
+                <rect x="278" y="72" width="282" height="104" rx="18" fill="rgba(18,30,58,0.9)" stroke="rgba(126,160,255,0.22)" />
+                <rect x="60" y="218" width="226" height="106" rx="18" fill="rgba(18,30,58,0.9)" stroke="rgba(126,160,255,0.22)" />
+                <rect x="328" y="218" width="232" height="106" rx="18" fill="rgba(18,30,58,0.9)" stroke="rgba(53,210,198,0.24)" />
+                <rect x="60" y="366" width="500" height="90" rx="18" fill="rgba(18,30,58,0.9)" stroke="rgba(126,160,255,0.2)" />
+
+                <path class="trace-line" d="M234 124H278" fill="none" stroke="url(#boardTrace)" stroke-width="5" stroke-linecap="round" />
+                <path class="trace-line" style="animation-duration: 10s" d="M172 176V218" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                <path class="trace-line" style="animation-duration: 12s" d="M390 176V218" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+                <path class="trace-line" style="animation-duration: 14s" d="M286 270H328" fill="none" stroke="#ff7a59" stroke-width="4" stroke-linecap="round" />
+                <path class="trace-line" d="M444 324V366" fill="none" stroke="url(#boardTrace)" stroke-width="5" stroke-linecap="round" />
+
+                <circle class="pulse-core" cx="234" cy="124" r="7" fill="#35d2c6" />
+                <circle class="pulse-core" style="animation-delay: 0.8s" cx="390" cy="218" r="7" fill="#7ea0ff" />
+                <circle class="pulse-core" style="animation-delay: 1.5s" cx="444" cy="366" r="7" fill="#ff7a59" />
+
+                <text x="84" y="106" fill="#b4fff9" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">DISCOVERY</text>
+                <text x="302" y="106" fill="#d4e0ff" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">MASTER PLAN</text>
+                <text x="84" y="252" fill="#d4e0ff" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">SKILL ROUTING</text>
+                <text x="352" y="252" fill="#b4fff9" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">EXECUTION LOOP</text>
+                <text x="84" y="400" fill="#ffc4b6" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">VERIFY / TYPECHECK / LINT / TEST</text>
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="skills">
+          <div class="section-header reveal">
+            <div>
+              <span class="panel-kicker">Skill pack</span>
+              <h2>Codex-native disciplines, not a generic prompt bundle.</h2>
+            </div>
+            <p>
+              The page below treats the skills as modules in a system. Each one
+              solves a recurring failure pattern: planning, debugging,
+              refactoring, TDD, frontend design, persistent recovery, or skill
+              authoring.
+            </p>
+          </div>
+
+          <div class="skills-grid">
+            <article class="skill-card reveal">
+              <span class="label">Core operating layer</span>
+              <h3>Conductor + engineering discipline</h3>
+              <p>These are the default rails for coding work. They enforce exploration, blast-radius checks, no type shortcuts, and explicit verification.</p>
+              <ul>
+                <li>`lbyl-conductor` orchestrates the workflow.</li>
+                <li>`lbyl-engineering-discipline` governs how edits are made.</li>
+                <li>`lbyl-persistent-plans` keeps progress recoverable on disk.</li>
+              </ul>
+            </article>
+
+            <article class="skill-card reveal delay-1">
+              <span class="label">Behavior change layer</span>
+              <h3>Debugging, TDD, refactoring</h3>
+              <p>When the task becomes more specific, the system routes to a narrower discipline rather than relying on vague best-effort behavior.</p>
+              <ul>
+                <li>`lbyl-systematic-debugging` requires root-cause work before fixes.</li>
+                <li>`lbyl-test-driven-development` enforces red/green rhythm.</li>
+                <li>`lbyl-refactoring` protects cross-file structural changes.</li>
+              </ul>
+            </article>
+
+            <article class="skill-card reveal delay-2">
+              <span class="label">Interface layer</span>
+              <h3>Frontend and skill authoring</h3>
+              <p>The pack also includes creative and meta-disciplines for building polished interfaces and authoring new reusable skills.</p>
+              <ul>
+                <li>`lbyl-frontend-design` prevents generic UI output.</li>
+                <li>`immersive-frontend` handles expressive motion-heavy surfaces.</li>
+                <li>`lbyl-skill-creator` improves or ships new skills.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="workflow">
+          <div class="timeline-card reveal">
+            <div class="timeline-diagram" aria-hidden="true">
+              <svg viewBox="0 0 420 420">
+                <circle cx="210" cy="210" r="150" fill="none" stroke="rgba(126,160,255,0.16)" stroke-width="2" />
+                <circle cx="210" cy="210" r="108" fill="none" stroke="rgba(53,210,198,0.16)" stroke-width="2" />
+                <circle cx="210" cy="210" r="64" fill="none" stroke="rgba(255,122,89,0.16)" stroke-width="2" />
+                <path class="ring" d="M210 60A150 150 0 0 1 360 210" fill="none" stroke="#7ea0ff" stroke-width="6" stroke-linecap="round" />
+                <path class="ring" style="animation-duration: 16s" d="M210 102A108 108 0 0 1 312 210" fill="none" stroke="#35d2c6" stroke-width="6" stroke-linecap="round" />
+                <path class="ring" style="animation-duration: 12s" d="M210 146A64 64 0 0 1 274 210" fill="none" stroke="#ff7a59" stroke-width="6" stroke-linecap="round" />
+                <path class="trace-line" d="M78 210H210L292 130" fill="none" stroke="#35d2c6" stroke-width="4" stroke-linecap="round" />
+                <path class="trace-line" style="animation-duration: 11s" d="M210 210L318 286H366" fill="none" stroke="#7ea0ff" stroke-width="4" stroke-linecap="round" />
+                <circle class="pulse-core" cx="78" cy="210" r="8" fill="#35d2c6" />
+                <circle class="pulse-core" style="animation-delay: 0.7s" cx="210" cy="210" r="10" fill="#ff7a59" />
+                <circle class="pulse-core" style="animation-delay: 1.4s" cx="366" cy="286" r="8" fill="#7ea0ff" />
+                <text x="54" y="194" fill="#b4fff9" font-family="IBM Plex Sans, sans-serif" font-size="15" letter-spacing="2">DISCOVER</text>
+                <text x="190" y="234" fill="#ffc4b6" font-family="IBM Plex Sans, sans-serif" font-size="15" letter-spacing="2">PLAN</text>
+                <text x="308" y="306" fill="#d4e0ff" font-family="IBM Plex Sans, sans-serif" font-size="15" letter-spacing="2">VERIFY</text>
+              </svg>
+            </div>
+
+            <div class="timeline-copy">
+              <span class="panel-kicker">Workflow</span>
+              <h3>A session rhythm that makes the agent legible.</h3>
+              <p>
+                The plugin turns the session into a sequence that can be
+                inspected: explore first, write the plan to disk, review the
+                plan, execute with the right disciplines, then verify the final
+                result.
+              </p>
+              <div class="timeline-list">
+                <div class="timeline-item">
+                  <strong>1. Discover the real shape of the task</strong>
+                  <span>Read files, imports, consumers, adjacent patterns, and conventions before implementation begins.</span>
+                </div>
+                <div class="timeline-item">
+                  <strong>2. Freeze intent in `plan.json` and `masterPlan.md`</strong>
+                  <span>Persist what will be built, how it will be verified, and where the risk lives.</span>
+                </div>
+                <div class="timeline-item">
+                  <strong>3. Execute with routed skills</strong>
+                  <span>Call the right specialty: frontend design, debugging, TDD, refactoring, or skill creation.</span>
+                </div>
+                <div class="timeline-item">
+                  <strong>4. Finish only after verification</strong>
+                  <span>Typecheck, lint, tests, and domain-specific review are part of completion, not an optional afterthought.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="install">
+          <div class="cta-card reveal">
+            <div class="cta-copy">
+              <span class="panel-kicker">Install path</span>
+              <h2>Drop the skill pack into Codex and make disciplined execution the default.</h2>
+              <p>
+                The repository ships the Codex-native skill set alongside the
+                upstream source tree. Install the skills, expose Orbit when
+                available, and use explicit skill routing for coding sessions
+                that need to stay sharp under pressure.
+              </p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="scripts/install-codex-skills.sh">`bash scripts/install-codex-skills.sh`</a>
+                <a class="button button-secondary" href="README.md">Read repository overview</a>
+              </div>
+              <div class="cta-meta">
+                <div>
+                  <span class="label">Ships with</span>
+                  <p>Codex-native `lbyl-*` skills plus synced upstream references for parity and adaptation.</p>
+                </div>
+                <div>
+                  <span class="label">Built for</span>
+                  <p>Teams that need the agent to behave like a senior engineer, not a fast autocomplete engine.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="cta-visual" aria-hidden="true">
+              <svg viewBox="0 0 620 360">
+                <defs>
+                  <linearGradient id="ctaTrace" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#35d2c6" />
+                    <stop offset="50%" stop-color="#7ea0ff" />
+                    <stop offset="100%" stop-color="#ff7a59" />
+                  </linearGradient>
+                </defs>
+                <path class="trace-line" d="M30 178H210C262 178 262 72 326 72H588" fill="none" stroke="url(#ctaTrace)" stroke-width="6" stroke-linecap="round" />
+                <path class="trace-line" style="animation-duration: 10s" d="M30 244H148C212 244 222 302 276 302H590" fill="none" stroke="#35d2c6" stroke-width="5" stroke-linecap="round" />
+                <circle class="pulse-core" cx="210" cy="178" r="10" fill="#7ea0ff" />
+                <circle class="pulse-core" style="animation-delay: 0.8s" cx="326" cy="72" r="10" fill="#35d2c6" />
+                <circle class="pulse-core" style="animation-delay: 1.6s" cx="276" cy="302" r="10" fill="#ff7a59" />
+                <rect x="340" y="42" width="200" height="62" rx="18" fill="rgba(17,27,53,0.92)" stroke="rgba(53,210,198,0.22)" />
+                <rect x="306" y="272" width="222" height="62" rx="18" fill="rgba(17,27,53,0.92)" stroke="rgba(255,122,89,0.22)" />
+                <text x="366" y="79" fill="#b4fff9" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">INSTALL SKILLS</text>
+                <text x="332" y="309" fill="#ffc4b6" font-family="IBM Plex Sans, sans-serif" font-size="16" letter-spacing="2">ROUTE FUTURE TASKS</text>
+              </svg>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Mockup page for the `codex-setup` plugin. Designed as a standalone HTML artifact with inline SVG motion and direct browser-open support.
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) {
+          return;
+        }
+
+        var revealables = document.querySelectorAll(".reveal");
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("is-visible");
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.18, rootMargin: "0px 0px -8% 0px" }
+        );
+
+        revealables.forEach(function (node) {
+          if (!node.classList.contains("is-visible")) {
+            observer.observe(node);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
