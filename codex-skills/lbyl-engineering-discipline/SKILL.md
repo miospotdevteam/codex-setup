@@ -78,7 +78,7 @@ What you must NEVER do:
 - Implement a simplified version without saying so
 - Build the backend but "forget" to wire up the frontend
 - Drop features during implementation that were in your plan
-- Declare victory when your plan has unchecked items
+- Declare victory when your plan has unfinished items
 
 If you catch yourself thinking "I'll skip this for now," stop. Either do it
 or explicitly flag it. Silently trimming scope is the single worst thing you
@@ -139,6 +139,24 @@ The check process:
 A single version bump can cascade through the entire project. Check lock
 files, peer dependencies, and framework compatibility before committing
 to the bump.
+
+### Refactoring tasks require the refactoring skill
+
+If the task involves renaming across files, moving files/modules, extracting
+code into new modules, splitting files, restructuring directories, or
+changing naming conventions across the codebase — **invoke
+`lbyl-refactoring`**. Its contract-based approach
+systematically catalogs every target, consumer, and test before changes
+begin, catching the missed consumers and dead code that make incomplete
+refactoring Codex's #1 failure mode.
+
+The refactoring skill applies when changes cross file boundaries. Single-file
+cleanup (renaming a variable within one function, simplifying conditionals)
+is handled by engineering-discipline directly — no skill invocation needed.
+
+If dep maps are configured, the refactoring skill uses `deps-query.py` to
+find all consumers instantly. After the refactoring, it regenerates stale
+dep maps so future queries reflect the new structure.
 
 ### Install before import
 
@@ -221,9 +239,9 @@ Before saying a task is done:
 1. Re-read the user's original message word by word
 2. Re-read your plan (if you wrote one)
 3. For each requirement: confirm it's implemented AND working
-4. For each plan step: confirm it's checked off
+4. For each plan step: confirm it's marked done
 5. Verification commands pass (types, lint, tests)
-6. No unchecked items remain in the plan
+6. No pending items remain in the plan
 
 If ANY requirement is unaddressed or ANY plan step is incomplete, you are
 NOT done. Go finish it, or explicitly flag what's remaining and why.
@@ -234,9 +252,9 @@ Before declaring a task done, every item must be checked:
 
 - [ ] User's original request re-read word by word
 - [ ] Every requirement implemented AND verified working
-- [ ] Plan steps all checked off (if a plan exists)
+- [ ] Plan steps all marked done (if a plan exists)
 - [ ] Verification commands pass (types, lint, tests)
-- [ ] No unchecked plan items remain
+- [ ] No pending plan items remain
 - [ ] Gaps, risks, and skipped items communicated explicitly
 
 ---
@@ -310,10 +328,12 @@ If you catch yourself doing any of these, stop and reconsider:
 | Using env vars without verifying they load | Check .env and loading mechanism |
 | Saying "You're absolutely right!" | Fix the bug, audit for similar ones, report |
 | Thinking "I'll skip this for now" | Do it or flag it — no silent cuts |
-| Editing 3+ code files without updating the plan | Stop coding, update masterPlan.md Progress NOW |
+| Editing 3+ code files without updating the plan | Stop coding, update plan.json via plan_utils.py NOW |
 | Thinking "I'll update the plan later" | Later never comes — compaction will erase your memory |
-| Using Bash to bypass normal editing flow | Stop and create the plan first |
+| Using Bash to bypass the normal editing flow | Stop and create the plan first |
 | Calling plan discipline "optional" | Treat it as mandatory process, not optional guidance |
 | Inventing workarounds to skip planning | Follow the process first, then execute |
-| Marking a plan step [x] without verifying the work | Verify first, then mark complete — [x] means DONE, not "I wrote some code" |
-| Moving a plan to completed/ before all steps are [x] | Finish the work or flag what's remaining to the user |
+| Marking a plan step done without verifying the work | Verify first, then mark complete — done means verified, not "I wrote some code" |
+| Moving a plan to completed/ before all steps are done | Finish the work or flag what's remaining to the user |
+| Renaming/moving/extracting across 3+ files without a contract | Invoke `lbyl-refactoring` first — build the contract |
+| Refactoring without running deps-query.py first (when dep maps exist) | Run deps-query.py on every target to get complete consumer lists |

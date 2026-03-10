@@ -9,8 +9,8 @@ This repository tracks two related things:
 The goal is the same in both environments: make the model behave like a
 disciplined engineer instead of a fast but sloppy one. The Codex port keeps
 the upstream exploration, planning, verification, and blast-radius rules, but
-rewrites Claude-only concepts such as hooks and plan mode into Codex-native
-instructions.
+rewrites Claude-only concepts such as hook enforcement and plan mode into
+Codex-native instructions, helper scripts, and Orbit-backed review flow.
 
 ## Why this exists
 
@@ -89,13 +89,13 @@ Typical prompts:
 For coding work, the expected default is:
 
 - explore first
-- write `.temp/plan-mode/active/<plan-name>/masterPlan.md` before source edits
+- write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
 - update the plan every 2-3 file edits
 - run relevant verification before declaring done
 
 By default, the Codex skill pack presents new plans through Orbit for review
-in VS Code before execution starts unless the user explicitly skips that
-review.
+with `orbit_await_review` before execution starts unless the user explicitly
+skips that review.
 
 ## Sync policy
 

@@ -32,7 +32,8 @@ apply almost everywhere.
 
 ### Safety Rules
 - Ask before deleting files, changing schemas, or altering production config.
-- Update `.temp/plan-mode/active/<plan-name>/masterPlan.md` every 2-3 file edits.
+- Create `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits.
+- Update `plan.json` every 2-3 file edits during multi-step work.
 
 ### Workflow Notes
 - Read `README.md` and this file before starting work.

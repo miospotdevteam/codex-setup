@@ -70,6 +70,18 @@ Create `refactoring-contract.md` in the active plan directory:
 - `Widget` moved to `src/components/Widget.ts` (0 imports from old path)
 ```
 
+**Dep map integration (TypeScript projects):**
+
+Before building the contract, check if dep maps are configured for the
+current project.
+If configured, run `deps-query.py` on EVERY target file FIRST — this gives
+you instant, complete consumer lists across all modules. Dep maps catch
+cross-module consumers that grep often misses. If dep maps are NOT
+configured, suggest setting them up before large refactors.
+
+After the refactoring is complete, regenerate stale dep maps (see Phase 4).
+File moves, renames, and extractions invalidate existing maps.
+
 **How to build it:**
 
 1. **List targets** — the specific functions, classes, types, files being
@@ -161,7 +173,14 @@ After all changes are applied:
 5. **Run type checker** — catches stale type references that grep might miss
 6. **Run linter** — catches unused imports, unused variables from incomplete
    cleanup
-7. **Final contract status** — update `refactoring-contract.md` with results:
+7. **Regenerate dep maps** (if configured) — file moves, renames, and
+   extractions make existing dep maps stale. Run:
+   ```bash
+   python3 ~/.codex/skills/lbyl-conductor/scripts/deps-generate.py <project_root> --stale-only
+   ```
+   This ensures consumers of the refactored code are correctly mapped for
+   future queries. If many modules were affected, run with `--all` instead.
+8. **Final contract status** — update `refactoring-contract.md` with results:
    ```
    ## Verification
    - Stale references: 0 (grepped for `oldName`, `old/path`)
@@ -188,8 +207,7 @@ Before touching any code, learn what "good" looks like in this project.
 1. **Read AGENTS.md** (project root) — coding standards, naming conventions,
    formatting rules, preferred patterns
 2. **Read any repo-local Codex config file if one exists** — check for a
-   `simplifier` section with project-specific
-   preferences:
+   `simplifier` section with project-specific preferences:
    ```yaml
    simplifier:
      prefer_explicit_returns: true
@@ -222,8 +240,9 @@ Expand your scope iteratively from the modified files outward.
 involved" field. These are your primary targets.
 
 **Ring 1: Direct imports and consumers** — For each modified file: read its
-imports (what does it depend on?), grep for consumers (who imports this
-file?), read each direct neighbor.
+imports (what does it depend on?), find consumers (use `deps-query.py` if
+dep maps are configured, otherwise grep — who imports this file?), read
+each direct neighbor.
 
 **Ring N: Propagation** — If a simplification in Ring 0 or 1 propagates
 (e.g., renaming an export requires updating consumers), follow that file's

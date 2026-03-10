@@ -8,11 +8,11 @@
 
 set -euo pipefail
 
-# Find project root: walk up from cwd looking for .git, AGENTS.md, or README.md
+# Find project root: walk up from cwd looking for .git or AGENTS.md
 find_project_root() {
   local dir="$PWD"
   while [ "$dir" != "/" ]; do
-    if [ -d "$dir/.git" ] || [ -f "$dir/AGENTS.md" ] || [ -f "$dir/README.md" ]; then
+    if [ -d "$dir/.git" ] || [ -f "$dir/AGENTS.md" ]; then
       echo "$dir"
       return 0
     fi
@@ -41,7 +41,7 @@ GITIGNORE_EOF
   echo "Created $GITIGNORE"
 fi
 
-# Determine the skill root to find script templates
+# Determine the plugin root to find script templates
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 # Copy plan-status.sh if missing or outdated
@@ -58,6 +58,13 @@ if [ ! -f "$RESUME_SCRIPT" ] || [ "$SCRIPT_DIR/resume.sh" -nt "$RESUME_SCRIPT" ]
   cp "$SCRIPT_DIR/resume.sh" "$RESUME_SCRIPT"
   chmod +x "$RESUME_SCRIPT"
   echo "Installed $RESUME_SCRIPT"
+fi
+
+# Copy plan_utils.py if missing or outdated (used by plan-status.sh and resume.sh)
+UTILS_SCRIPT="$SCRIPTS_DIR/plan_utils.py"
+if [ ! -f "$UTILS_SCRIPT" ] || [ "$SCRIPT_DIR/plan_utils.py" -nt "$UTILS_SCRIPT" ]; then
+  cp "$SCRIPT_DIR/plan_utils.py" "$UTILS_SCRIPT"
+  echo "Installed $UTILS_SCRIPT"
 fi
 
 echo "Plan directory ready at $PLAN_DIR"

@@ -1,6 +1,6 @@
 ---
 name: immersive-frontend
-description: "Build award-winning immersive web experiences with WebGL, Three.js, R3F, GSAP ScrollTrigger, custom GLSL shaders, and scroll-driven 3D choreography. Use this skill whenever the user asks for: immersive websites, WebGL experiences, 3D web, creative dev, scroll-driven animations, cinematic scroll, Three.js sites, GSAP + Three.js, motion-driven sites, award-winning website design, Awwwards-quality sites, full-canvas experiences, particle systems, shader effects, smooth scroll with WebGL, preloader animations, image distortion effects, parallax depth, magnetic cursors, text reveal animations, infinite marquees, or any request that goes beyond standard UI into experiential, motion-first, canvas-driven territory. Also use when the user references studios like Active Theory, Lusion, Immersive Garden, or sites from Awwwards/Codrops. Do NOT use for: standard UI components, form-heavy pages, admin dashboards, or layout-focused work without WebGL or advanced motion — use frontend-design instead."
+description: "Build immersive, motion-first web experiences with WebGL, Three.js, R3F, GSAP ScrollTrigger, shaders, and scroll-driven 3D choreography. Use for cinematic, canvas-heavy frontend work beyond standard UI layouts."
 ---
 
 # Immersive Frontend
@@ -24,11 +24,63 @@ This skill operates within the conductor's Step 1-3:
 - **Phase 4** (Verification) runs after implementation.
 
 If `brainstorming` ran first and produced visual direction: use those
-decisions and skip to Phase 2.
+decisions. If `frontend-design` Phase 2 ran first: use its design direction
+(axes, creative seed, typography, color). In both cases, skip to Phase 2.
 
 ---
 
 ## Phase 1: Assessment — What Are We Building?
+
+### Design Direction
+
+An immersive site still needs intentional design — typography, color, spacing,
+and creative direction. Before diving into technical architecture:
+
+**If `frontend-design` Phase 2 ran first** (it produced a Design Handoff
+document with axis scores, creative seed, typography, color system, motion
+tier, and scope): read that document from `discovery.md` or `design.md`.
+Those decisions inform background colors, text overlays, particle palettes,
+UI chrome, and overall mood. If the handoff specifies a hybrid scope,
+follow the Hybrid Projects pattern above. Skip to the Decision Tree below.
+
+**If `brainstorming` ran first** and produced visual direction in `design.md`:
+use those decisions. Skip to the Decision Tree below.
+
+**If neither ran**: invoke `frontend-design` Phase 2 (Greenfield — Decision
+Matrix) to establish the aesthetic direction. The 6-axis scores, creative
+seed, typography pairing, and color system apply to immersive sites just as
+much as standard ones. Once the user approves the direction, return here
+for the technical architecture.
+
+Do NOT skip design direction because the work is "technical." An immersive
+experience with default colors and Inter is a tech demo, not a designed
+experience.
+
+### Creative Palette Libraries
+
+For scene colors (particles, mesh materials, canvas backgrounds), use
+curated creative palette libraries instead of picking colors by hand:
+
+| Library | Best for | Install |
+|---|---|---|
+| **chromotome** | Artistic scenes — 200+ palettes with designated background + stroke colors | `npm i chromotome` |
+| **nice-color-palettes** | Random harmonious palettes (1000 × 5 colors) for generative work | `npm i nice-color-palettes` |
+| **riso-colors** | Retro/print aesthetic with flat, textured tones | `npm i riso-colors` |
+
+```javascript
+// Example: chromotome palette → Three.js materials
+import { getRandom } from 'chromotome';
+const palette = getRandom();
+const bgColor = new THREE.Color(palette.background);
+const meshColors = palette.colors.map(c => new THREE.Color(c));
+scene.background = bgColor;
+```
+
+UI chrome (nav, text overlays, buttons) should still use the design tokens
+from `frontend-design` — creative palettes are for the visual/artistic
+layer only.
+
+See `PACKAGES.md` in the plugin root for the full list.
 
 ### Decision Tree
 
@@ -39,7 +91,27 @@ Does it need 3D objects / WebGL?
 ├── YES → Read: references/three-js-patterns.md
 │   ├── Custom shaders needed? → Also read: references/shader-recipes.md
 │   ├── Scroll drives the 3D scene? → Also read: references/gsap-scroll-patterns.md
-│   └── Heavy assets (models, textures)? → Also read: references/architecture.md (preloader)
+│   │   └── ScrollSmoother or Observer? → Also read: references/gsap-scroll-advanced.md
+│   ├── Heavy assets (models, textures)? → Also read: references/architecture.md (preloader)
+│   └── Physics, motion paths, particles? → Also read: references/gsap-motion-physics.md
+│
+├── SVG morphing, drawing, or stroke animation?
+│   └── Read: references/gsap-svg-plugins.md
+│
+├── Layout animations (Flip, Draggable, Observer)?
+│   └── Read: references/gsap-layout-plugins.md
+│
+├── Text effects (SplitText, ScrambleText, decode)?
+│   └── Read: references/gsap-text-plugins.md
+│
+├── Custom easing (bounce, wiggle, rough, slow-mo)?
+│   └── Read: references/gsap-easing-advanced.md
+│
+├── Animated scroll-to navigation (anchor links, back-to-top)?
+│   └── Read: references/gsap-scroll-to-plugin.md
+│
+├── Momentum/throw physics, infinite loops, value snapping?
+│   └── Read: references/gsap-value-plugins.md
 │
 └── NO (2D motion only: text reveals, parallax, marquees)
     └── Read: references/gsap-scroll-patterns.md + references/effects-cookbook.md
@@ -48,6 +120,14 @@ Does it need 3D objects / WebGL?
 **Always read:** `references/architecture.md` for the canvas+DOM layering
 pattern and smooth scroll setup — these apply to every immersive site.
 
+**Always read:** `references/gsap-core-patterns.md` for gsap.context()
+(cleanup), gsap.matchMedia() (responsive), and gsap.utils (utilities) —
+these apply to every GSAP project.
+
+**When debugging:** Read `references/gsap-common-mistakes.md` for common
+pitfalls. Keep `references/gsap-helpers-cheatsheet.md` handy as a quick
+lookup for imports, methods, and configuration.
+
 ### Complexity Tiers
 
 | Tier | Description | Stack | Reference Files |
@@ -55,6 +135,41 @@ pattern and smooth scroll setup — these apply to every immersive site.
 | **Motion-Enhanced** | Smooth scroll, text reveals, parallax, marquees. No WebGL. | GSAP + Lenis | gsap-scroll-patterns, effects-cookbook |
 | **WebGL-Lite** | Canvas background (particles, blobs), DOM content on top. | Three.js + GSAP + Lenis | All except shader-recipes |
 | **Full Immersive** | Scroll-driven 3D scenes, custom shaders, preloader, page transitions. | Three.js + GSAP + Lenis + GLSL | All reference files |
+
+### Hybrid Projects (Immersive Sections in Standard UI)
+
+When adding immersive sections to an existing UI site (not a full-canvas
+experience):
+
+1. **Scope partition:** Identify which sections are immersive (this skill)
+   vs standard UI (`frontend-design`). Document the boundary explicitly.
+2. **Canvas containment:** Use a scoped `<canvas>` inside a section, not
+   `position: fixed` full-page. The canvas lives inside the immersive
+   section's DOM element and resizes with it.
+3. **Lazy loading:** Don't block the rest of the site. Load Three.js and
+   scene assets only when the immersive section enters the viewport (use
+   `IntersectionObserver` or dynamic `import()`).
+4. **Scroll handoff:** The page uses native or standard smooth scrolling.
+   The immersive section pins and scrubs its content within its scroll
+   range. After the section ends, normal scrolling resumes.
+5. **Design continuity:** The immersive section's typography, colors, and
+   spacing should match the rest of the site (consume the same design
+   tokens). The transition into and out of the immersive section should
+   feel seamless.
+
+```javascript
+// Lazy-load the 3D section
+const observer = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    import('./ImmersiveSection.js').then(m => m.init(sectionEl));
+    observer.disconnect();
+  }
+}, { rootMargin: '200px' }); // Start loading 200px before visible
+observer.observe(document.querySelector('#immersive-section'));
+```
+
+See `references/architecture.md` § Hybrid Integration Pattern for the
+scoped canvas setup.
 
 ---
 
@@ -111,7 +226,7 @@ gsap.ticker.lagSmoothing(0); // Prevent desync after lag spikes
 | 3D in React app | **React Three Fiber + Drei** | Declarative, auto-disposal, hooks |
 | Scroll-linked animations | **GSAP ScrollTrigger** | Scrub, pin, snap, batch, timeline |
 | Smooth scrolling | **Lenis** | Syncs with rAF, works with ScrollTrigger |
-| Text split/reveal | **GSAP SplitText** (or manual split) | Industry standard for char/word/line animation |
+| Text split/reveal | **GSAP SplitText** (free, included with gsap) | Industry standard for char/word/line animation |
 | Page transitions (MPA) | **Barba.js** | Preserves canvas across navigations |
 | Spring physics (React) | **Motion (Framer Motion)** | AnimatePresence, layout animations |
 | Custom visual effects | **GLSL shaders** | GPU-accelerated, per-pixel control |
@@ -119,17 +234,18 @@ gsap.ticker.lagSmoothing(0); // Prevent desync after lag spikes
 
 ### CDN Links (for single-file HTML)
 
-```html
-<!-- Three.js -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
+Pin specific versions for production. **Before using the versions below,
+check npm for the latest stable release** — these are reference versions
+that may be outdated:
 
-<!-- GSAP + Plugins -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+| Library | npm page | Reference version |
+|---|---|---|
+| Three.js | `npmjs.com/package/three` | 0.170.0 |
+| GSAP | `npmjs.com/package/gsap` | 3.12.7 |
+| Lenis | `npmjs.com/package/lenis` | 1.2.3 |
 
-<!-- Lenis Smooth Scroll -->
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
-```
+See `references/architecture.md` § CDN Reference for copy-paste `<script>`
+tags with the latest known versions.
 
 ---
 
@@ -166,6 +282,53 @@ gsap.ticker.lagSmoothing(0); // Prevent desync after lag spikes
 
 10. **Mobile fallback.** Detect via `matchMedia` and serve reduced
     particle counts, no shadows, simpler shaders, lower DPR.
+
+### Accessibility for Immersive Experiences
+
+Immersive sites must be usable by everyone. These aren't optional — they're
+requirements.
+
+**Vestibular / motion sensitivity:**
+- Detect `prefers-reduced-motion: reduce` and provide a meaningful static
+  fallback — not a blank page, but a simplified version with no parallax,
+  no scroll-driven camera movement, and no auto-playing animation
+- Offer a visible "Reduce motion" toggle in the UI (don't rely solely on
+  OS setting)
+- Avoid large-area motion (full-viewport transforms) that triggers
+  vestibular responses
+
+**Seizure / photosensitivity (WCAG 2.3.1):**
+- No content flashes more than 3 times per second
+- No sudden high-contrast transitions (dark↔light full-screen)
+- Avoid strobing particle effects or rapid color cycling
+
+**Cognitive overload:**
+- Don't fire all effects simultaneously — stagger reveals so the user
+  processes one thing at a time
+- Provide visual anchors (stable text, fixed nav) alongside moving elements
+- Keep the scroll-to-effect ratio predictable — erratic speeds disorient
+
+**Implementation pattern:**
+```javascript
+const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+if (prefersReduced) {
+  // Static scene: set final camera position, skip scroll animation
+  camera.position.set(0, 0, 5);
+  // Show content immediately, no preloader animation
+  gsap.set('#preloader', { autoAlpha: 0 });
+  // Disable Lenis smooth scroll — use native
+  // Don't start the render loop ticker for scroll-driven updates
+} else {
+  // Full immersive experience
+  initLenis();
+  initScrollTriggers();
+  startRenderLoop();
+}
+```
+
+See `references/architecture.md` § Accessibility Implementation Patterns
+for complete patterns.
 
 ### Anti-Patterns — What NOT to Do
 
@@ -250,6 +413,24 @@ window.addEventListener('resize', onResize);
 - [ ] **Draw calls**: Within budget (check `renderer.info.render.calls`)
 - [ ] **Scroll feels right**: `scrub` has smoothing value, not raw `true`
 
+### Performance Profiling Workflow
+
+When verifying performance, follow this sequence (see
+`references/architecture.md` § Performance Profiling Workflow for detailed
+steps):
+
+1. **Chrome DevTools Performance tab** — record a scroll through the full
+   experience, look for long frames (>16ms) and jank
+2. **Rendering panel** — enable "Paint flashing" and "Layout shift regions"
+   to catch DOM-triggered repaints
+3. **`renderer.info`** — log draw calls, triangles, texture/geometry counts
+   against the performance budgets
+4. **GPU bottleneck test** — reduce canvas size by 50%; if FPS improves
+   significantly, you're fill-rate bound (reduce shader complexity, lower
+   DPR)
+5. **CPU bottleneck test** — simplify JS logic; if FPS improves, optimize
+   the ticker callback or reduce object count
+
 ### Standard Checks (from engineering-discipline)
 
 - [ ] Type checker passes
@@ -261,19 +442,50 @@ window.addEventListener('resize', onResize);
 
 ## Reference Files
 
+> **Note:** GSAP is now 100% free — all plugins included with `bun add gsap`.
+
+### Core References (read for every project)
+
+| File | Contents | When to Read |
+|------|----------|--------------|
+| `references/architecture.md` | Preloader, canvas+DOM layering, DOM-to-WebGL sync, page transitions, performance budgets | Site architecture decisions |
+| `references/gsap-scroll-patterns.md` | GSAP core, ScrollTrigger, Lenis, SplitText basics, Motion, timelines | Any scroll-driven animation |
+| `references/gsap-core-patterns.md` | gsap.context() cleanup, gsap.matchMedia() responsive, quickTo/quickSetter, registerEffect, gsap.utils, CSS variable animation, delayedCall, exportRoot | Every GSAP project |
+| `references/gsap-helpers-cheatsheet.md` | Full import table, methods, timeline control, position parameter, stagger, easing, ScrollTrigger config, ticker | Quick lookup / cheatsheet |
+
+### WebGL & Shaders
+
 | File | Contents | When to Read |
 |------|----------|--------------|
 | `references/three-js-patterns.md` | Scene setup, cameras, materials, R3F, particles, post-processing, disposal | Any WebGL work |
-| `references/gsap-scroll-patterns.md` | GSAP core, ScrollTrigger, Lenis, SplitText, Motion, timelines | Any scroll-driven animation |
 | `references/shader-recipes.md` | Complete GLSL: noise displacement, chromatic aberration, distortion, grain, ripple, vignette, fresnel | Custom shader effects |
-| `references/architecture.md` | Preloader, canvas+DOM layering, DOM-to-WebGL sync, page transitions, performance budgets | Site architecture decisions |
+
+### GSAP Plugin References
+
+| File | Contents | When to Read |
+|------|----------|--------------|
+| `references/gsap-text-plugins.md` | SplitText (new free API: mask, autoSplit, onSplit, aria), ScrambleText, TextPlugin | Text reveal, decode, typewriter effects |
+| `references/gsap-svg-plugins.md` | MorphSVG (morphing, convertToPath, shapeIndex), DrawSVG (stroke animation), SVG transforms | SVG morphing, line drawing, stroke animation |
+| `references/gsap-layout-plugins.md` | Flip (FLIP layout animation), Draggable (drag with physics), Observer (event unification) | Layout transitions, drag-to-reorder, scroll hijacking |
+| `references/gsap-motion-physics.md` | MotionPath (SVG path animation), Physics2D (velocity/gravity), PhysicsProps (per-property physics) | Path animation, particle explosions, physics simulation |
+| `references/gsap-scroll-advanced.md` | ScrollSmoother (vs Lenis comparison), advanced Observer patterns, velocity carousel | Choosing smooth scroll approach, full-page snapping |
+| `references/gsap-easing-advanced.md` | CustomEase (SVG paths), CustomBounce (squash), CustomWiggle (oscillation), EasePack (RoughEase, SlowMo, ExpoScaleEase) | Custom/branded motion curves, glitch effects, dramatic reveals |
+| `references/gsap-scroll-to-plugin.md` | ScrollToPlugin — animated scroll to positions/elements, offsetY, autoKill, container scrolling | Nav links, scroll-to-section, back-to-top, programmatic scrolling |
+| `references/gsap-value-plugins.md` | InertiaPlugin (momentum/throw), Modifiers (per-frame value interception, infinite loops), Snap (live grid/array snapping), roundProps (integer rounding) | Momentum physics, infinite carousels, value snapping, pixel-perfect counters |
+
+### Debugging & Patterns
+
+| File | Contents | When to Read |
+|------|----------|--------------|
+| `references/gsap-common-mistakes.md` | 8 ScrollTrigger mistakes, 8 GSAP core mistakes, FOUC prevention, SVG gotchas, debugging checklist | Debugging, code review, avoiding pitfalls |
 | `references/effects-cookbook.md` | 8 complete implementations: preloader, smooth scroll, text reveal, marquee, magnetic cursor, image distortion, parallax, camera path | Building specific effects |
 
 ### Routing to Other Skills
 
 | Need | Skill |
 |------|-------|
-| Standard UI/UX design decisions | `frontend-design` |
+| Design direction (typography, color, axes, creative seed) | `frontend-design` Phase 2 |
+| Standard DOM-based UI (no WebGL/canvas) | `frontend-design` Phase 3 |
 | Creative direction brainstorming | `brainstorming` |
 | Implementation planning | `writing-plans` |
 | Testing strategy | `test-driven-development` |

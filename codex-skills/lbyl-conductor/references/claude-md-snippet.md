@@ -12,10 +12,10 @@ All tasks use the lbyl skill pack. This is the default operating
 mode — not optional.
 
 ### Plan Discipline
-- **Before editing code**: write a plan to `.temp/plan-mode/active/<plan-name>/masterPlan.md`
+- **Before editing code**: write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md`
 - **After any compaction**: IMMEDIATELY read the active plan — do not wait for user prompt
-- **Every 2-3 file edits**: checkpoint — update Progress checklist in the plan on disk
-- **After each step**: update the plan file on disk immediately
+- **Every 2-3 file edits**: checkpoint — update `plan.json` on disk
+- **After each step**: update `plan.json` immediately and keep `masterPlan.md` frozen after Orbit approval
 - **Check plan status**: `bash .temp/plan-mode/scripts/plan-status.sh`
 - **Find what to resume**: `bash .temp/plan-mode/scripts/resume.sh`
 - **Steps with >10 files or sweep keywords**: MUST get a sub-plan with Groups

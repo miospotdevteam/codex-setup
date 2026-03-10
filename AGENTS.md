@@ -15,6 +15,7 @@ Codex-native skills:
 - `codex-skills/lbyl-frontend-design`
 - `codex-skills/lbyl-brainstorming`
 - `codex-skills/lbyl-agent-setup`
+- `codex-skills/lbyl-skill-creator`
 
 Upstream skills also shipped from this repo:
 - `look-before-you-leap/skills/look-before-you-leap`
@@ -31,7 +32,8 @@ Upstream skills also shipped from this repo:
 
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
-- Before editing source, create `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+- Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+- Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Verify with project typecheck, lint, and relevant tests before declaring done.
 - Never silently drop requested scope.

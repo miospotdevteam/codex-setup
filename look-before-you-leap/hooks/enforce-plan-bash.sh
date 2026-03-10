@@ -48,6 +48,7 @@ ALLOWED_PREFIXES = [
     "docker ", "docker-compose ",
     "brew ", "apt ", "apt-get ",
     "chmod ", "chown ",
+    "cat ", "head ", "tail ", "wc ", "sort ", "uniq ", "diff ",
     "mkdir ", "rmdir ", "rm ",
     "cp ", "mv ",
     "curl ", "wget ",
@@ -79,7 +80,8 @@ WRITE_PATTERNS = [
     r"\btee\b",           # tee writes to files
     r"\bdd\b.*\bof=",    # dd output file
     # Scripting language file writes (prevent creative bypasses)
-    r"\bpython[23]?\b.*\b(open|write|Path)\b",  # python3 -c "open('f','w')..."
+    # Only match python scripts that write to files (not stdin reads or -c inline)
+    r"\bpython[23]?\s+\S+\.py\b.*\b(open|write|Path)\b",  # python3 script.py with file writes
     r"\bnode\b.*\b(writeFile|appendFile)",         # node -e "fs.writeFileSync..."
     r"\bruby\b.*\bFile\.(write|open)\b",         # ruby -e "File.write..."
     r"\bperl\b.*\bopen\b",                       # perl -e "open(F,'>file')..."
@@ -128,9 +130,14 @@ if [ -f "$NO_PLAN_FILE" ]; then
   fi
 fi
 
-# Check for active plan — if one exists, allow
+# Check for active plan (plan.json or legacy masterPlan.md) — if one exists, allow
 ACTIVE_DIR="$PROJECT_ROOT/.temp/plan-mode/active"
 if [ -d "$ACTIVE_DIR" ]; then
+  for plan in "$ACTIVE_DIR"/*/plan.json; do
+    if [ -f "$plan" ]; then
+      exit 0
+    fi
+  done
   for plan in "$ACTIVE_DIR"/*/masterPlan.md; do
     if [ -f "$plan" ]; then
       exit 0

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# PostToolUse hook: Enforce plan mode handoff for fresh plans.
+# PostToolUse hook: Enforce plan review handoff for fresh plans.
 #
 # After every Edit/Write to a masterPlan.md, checks if the plan is fresh
 # (all steps are [ ], none are [x] or [~]). If so:
 # 1. Creates .temp/plan-mode/.handoff-pending marker
-# 2. Injects a strong directive to enter plan mode, summarize, and exit
+# 2. Injects directive to present the plan via Orbit MCP for user review
 #
-# This ensures Claude always does the plan mode handoff (enter plan mode →
-# summarize → exit plan mode → user gets "clear context and accept all edits"
-# prompt) before starting execution. Fresh context = more reliable execution.
+# The Orbit flow: generate resolved artifact (opens in VS Code) → user
+# reviews with inline comments → user approves or requests changes →
+# Claude reads feedback, iterates if needed, then proceeds to execution
+# via plan mode handoff (EnterPlanMode → summarize → ExitPlanMode).
 #
 # The marker is cleared by session-start.sh (new session = context cleared).
 # Bypass: rm .temp/plan-mode/.handoff-pending
@@ -26,29 +27,48 @@ data = json.loads(sys.stdin.read())
 print(data.get('tool_input', {}).get('file_path', ''))
 " <<< "$INPUT" 2>/dev/null) || true
 
-# Only act on masterPlan.md files inside .temp/plan-mode/active/
-if [[ "$FILE_PATH" != *"/.temp/plan-mode/active/"*"/masterPlan.md" ]]; then
+# Act on plan.json OR masterPlan.md inside .temp/plan-mode/active/
+if [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/plan.json" ]]; then
+  PLAN_DIR="$(dirname "$FILE_PATH")"
+elif [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/masterPlan.md" ]]; then
+  PLAN_DIR="$(dirname "$FILE_PATH")"
+else
   exit 0
 fi
 
-# Verify the file exists
-if [ ! -f "$FILE_PATH" ]; then
-  exit 0
-fi
+# Determine freshness — prefer plan.json
+PLUGIN_ROOT="$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)"
+PLAN_UTILS="${PLUGIN_ROOT}/skills/look-before-you-leap/scripts/plan_utils.py"
+PLAN_JSON="$PLAN_DIR/plan.json"
+MASTER_PLAN="$PLAN_DIR/masterPlan.md"
 
-# Check if this is a fresh plan: all steps are [ ], none are [x] or [~]
-# Only match checklist lines (not prose that mentions these markers)
-done_count=$(grep -cE '^\s*-\s*\[x\]' "$FILE_PATH" 2>/dev/null) || true
-active_count=$(grep -cE '^\s*-\s*\[~\]' "$FILE_PATH" 2>/dev/null) || true
-pending_count=$(grep -cE '^\s*-\s*\[ \]' "$FILE_PATH" 2>/dev/null) || true
-
-# Not a fresh plan if any step is done or in progress
-if [ "$done_count" -gt 0 ] || [ "$active_count" -gt 0 ]; then
-  exit 0
-fi
-
-# No pending steps = not a real plan (maybe just the header)
-if [ "$pending_count" -eq 0 ]; then
+if [ -f "$PLAN_JSON" ]; then
+  is_fresh=$(python3 "$PLAN_UTILS" is-fresh "$PLAN_JSON" 2>/dev/null) || true
+  if [ "$is_fresh" != "true" ]; then
+    exit 0
+  fi
+  pending_count=$(python3 -c "
+import json
+plan = json.load(open('$PLAN_JSON'))
+print(sum(1 for s in plan.get('steps', []) if s.get('status') == 'pending'))
+" 2>/dev/null) || true
+  # For the FILE_PATH used in the directive, prefer masterPlan.md (user-facing)
+  if [ -f "$MASTER_PLAN" ]; then
+    FILE_PATH="$MASTER_PLAN"
+  fi
+elif [ -f "$MASTER_PLAN" ]; then
+  # Legacy: grep masterPlan.md
+  done_count=$(grep -cE '^\s*-\s*\[x\]' "$MASTER_PLAN" 2>/dev/null) || true
+  active_count=$(grep -cE '^\s*-\s*\[~\]' "$MASTER_PLAN" 2>/dev/null) || true
+  pending_count=$(grep -cE '^\s*-\s*\[ \]' "$MASTER_PLAN" 2>/dev/null) || true
+  if [ "$done_count" -gt 0 ] || [ "$active_count" -gt 0 ]; then
+    exit 0
+  fi
+  if [ "$pending_count" -eq 0 ]; then
+    exit 0
+  fi
+  FILE_PATH="$MASTER_PLAN"
+else
   exit 0
 fi
 
@@ -67,7 +87,12 @@ PROJECT_ROOT="$(find_project_root "${HOOK_CWD:-$PWD}")"
 PLAN_MODE_DIR="$PROJECT_ROOT/.temp/plan-mode"
 MARKER_FILE="$PLAN_MODE_DIR/.handoff-pending"
 
-# Create the marker (idempotent — re-creating on repeated edits is fine)
+# Don't re-fire if handoff is already pending (prevents re-injection after Orbit approval)
+if [ -f "$MARKER_FILE" ]; then
+  exit 0
+fi
+
+# Create the marker
 echo "$FILE_PATH" > "$MARKER_FILE"
 
 # Inject directive
@@ -91,21 +116,45 @@ output = {
     "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
         "additionalContext": (
-            f"PLAN MODE HANDOFF REQUIRED — Fresh plan '{plan_name}' detected "
+            f"PLAN REVIEW REQUIRED — Fresh plan '{plan_name}' detected "
             f"({pending} steps, all pending).\n\n"
-            "STOP. Do NOT start editing code files. You MUST do the plan mode "
-            "handoff first:\n\n"
-            "1. Call `EnterPlanMode` to enter plan mode\n"
-            "2. Read the masterPlan you just wrote from disk\n"
-            "3. Write a summary to the plan mode scratch pad — include: key steps, "
-            "files involved, acceptance criteria (enough for the user to approve "
-            "or reject)\n"
-            "4. Call `ExitPlanMode` to present the plan to the user\n\n"
-            "This gives the user the built-in 'autoaccept edits and clear context?' "
-            "prompt. If they accept, context clears and execution starts fresh — "
-            "far more reliable than executing in a bloated context full of "
-            "exploration data.\n\n"
-            "Code edits are BLOCKED until this handoff is complete (or bypassed).\n"
+            "STOP. Do NOT start editing code files. Present the plan to the "
+            "user for review via Orbit MCP, then do the plan mode handoff.\n\n"
+            "## Step A: Discover Orbit tools\n\n"
+            "Use ToolSearch to load the orbit_await_review tool:\n"
+            "  ToolSearch query: \"+orbit await_review\"\n\n"
+            "## Step B: Submit for review (blocking)\n\n"
+            "1. Tell the user: \"The plan is open in VS Code for review. "
+            "Add inline comments on any section, then click Approve or "
+            "Request Changes.\"\n"
+            f"2. Call `orbit_await_review` with sourcePath: `{plan_path}`\n"
+            "   This generates the artifact, opens it in VS Code, and BLOCKS "
+            "until the user clicks Approve or Request Changes. Do NOT call "
+            "orbit_generate_resolved separately — orbit_await_review does it.\n\n"
+            "## Step C: Handle the response\n\n"
+            "orbit_await_review returns a JSON with `status` and `threads`.\n\n"
+            "- **If status is `approved` with no threads**: Proceed to Step C.\n"
+            "- **If status is `approved` with threads**: Read each thread, "
+            "reply as agent acknowledging the feedback, resolve threads, "
+            "then proceed to Step C.\n"
+            "- **If status is `changes_requested`**: Read all threads. Update "
+            "masterPlan.md to address the feedback. Reply to each thread "
+            "explaining what you changed. Resolve threads. Then call "
+            f"`orbit_await_review` again on `{plan_path}` for re-review. "
+            "Loop back to handle the new response.\n"
+            "- **If status is `timeout`**: Tell the user the review timed out "
+            "and ask them to review when ready.\n\n"
+            "## Step D: Plan mode handoff (post-approval)\n\n"
+            "3. Call `EnterPlanMode` to enter plan mode\n"
+            "4. Read the masterPlan from disk\n"
+            "5. Write a summary to the plan mode scratch pad — include: key "
+            "steps, files involved, acceptance criteria\n"
+            "6. Call `ExitPlanMode` to present to the user\n\n"
+            "This gives the user the 'autoaccept edits and clear context?' "
+            "prompt. If they accept, context clears and execution starts "
+            "fresh.\n\n"
+            "Code edits are BLOCKED until this handoff is complete (or "
+            "bypassed).\n"
             f"To bypass: rm {marker}"
         )
     }

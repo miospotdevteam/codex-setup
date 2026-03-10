@@ -1,6 +1,6 @@
 ---
 name: look-before-you-leap
-description: "Unified engineering discipline for ALL coding tasks. Three layers: this file (the conductor), quick-reference checklists, and deep guides. Enforces structured exploration before planning, persistent plans that survive compaction, disciplined execution with blast radius tracking and type safety, and multi-discipline coverage (testing, UI consistency, security, git, linting, dependencies). Use for every task that touches source files — no exceptions, no shortcuts. Do NOT use when: answering questions about code without changing it, pure research or documentation queries, conversations with no file edits, or running commands that don't modify the codebase."
+description: "Unified engineering discipline for ALL coding tasks. Three layers: this file (the conductor), quick-reference checklists, and deep guides. Enforces structured exploration before planning, persistent plans that survive compaction, TDD red-green-refactor cycles that prevent implementation-first coding, disciplined execution with blast radius tracking and type safety, and multi-discipline coverage (testing, UI consistency, security, git, linting, dependencies). Use for every task that touches source files — no exceptions, no shortcuts. Do NOT use when: answering questions about code without changing it, pure research or documentation queries, conversations with no file edits, or running commands that don't modify the codebase."
 ---
 
 # Software Discipline
@@ -34,12 +34,15 @@ Look for installed skills that match these needs:
 | Brainstorming, creative work | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
 | Writing implementation plans | **Always** use `look-before-you-leap:writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | **Always** use `look-before-you-leap:test-driven-development` — never another plugin's TDD skill |
-| Frontend UI work | **Always** use `look-before-you-leap:frontend-design` — never another plugin's frontend-design skill |
+| Frontend UI design, standard web interfaces | **Always** use `look-before-you-leap:frontend-design` — never another plugin's frontend-design skill |
+| Immersive web, WebGL, 3D, scroll-driven creative dev | **Always** use `look-before-you-leap:immersive-frontend` — never another plugin's immersive-frontend skill |
+| React Native, mobile apps, Expo, native feel | **Always** use `look-before-you-leap:react-native-mobile` — never another plugin's mobile skill |
 | Security review | "security", "authentication", "auth" |
 | Code review | "code review", "review" |
 | Debugging | **Always** use `look-before-you-leap:systematic-debugging` — never another plugin's debugging skill |
 | Refactoring, restructuring, extracting, moving files | **Always** use `look-before-you-leap:refactoring` (full mode) — never another plugin's refactoring skill |
 | Post-execution simplification | **Always** use `look-before-you-leap:refactoring` (quick mode) — never another plugin's code-simplifier skill |
+| Skill quality review after creation | **Always** use `look-before-you-leap:skill-review-standard` — post-creation quality gate |
 | PR/commit workflow | "commit", "PR", "git" |
 
 If no specialized skill exists, use the checklists and guides in `references/`.
@@ -96,6 +99,19 @@ Dep maps make consumer finding and blast-radius analysis instant and complete.
 For complex or unfamiliar codebases, also read
 `references/exploration-guide.md`.
 
+### Refactoring tasks
+
+If the task is a refactoring (rename across files, move files, extract
+modules, restructure directories, split files, change naming conventions),
+invoke `look-before-you-leap:refactoring` to structure the exploration.
+Its Phase 1 (Inventory) replaces generic exploration with a **refactoring
+contract** that catalogs every target, export, consumer, and test. This
+contract becomes the verification checklist for the plan.
+
+If dep maps are configured, the refactoring skill uses `deps-query.py` to
+find consumers instantly. After the refactoring, it regenerates stale dep
+maps so future queries reflect the new structure.
+
 ### Persist your findings
 
 If the task requires exploration (anything beyond a trivial single-file
@@ -111,18 +127,19 @@ Write a `discovery.md` in that directory with what you found: file paths,
 patterns, conventions, dependencies, blast radius, open questions. Use
 the 8 questions from `references/exploration-protocol.md` as structure.
 
-This file survives compaction and feeds directly into the masterPlan's
-Discovery Summary. If you skip this, your future compacted self starts
+This file survives compaction and feeds directly into the plan's
+discovery section. If you skip this, your future compacted self starts
 from zero.
 
 ---
 
 ## Step 2: Plan (write to disk before editing code)
 
-**Invoke `look-before-you-leap:writing-plans`** to produce the masterPlan.
+**Invoke `look-before-you-leap:writing-plans`** to produce the plan.
 The skill consumes your discovery.md, identifies applicable discipline
-checklists, structures TDD-granularity steps, and writes the masterPlan
-to `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+checklists, structures TDD-granularity steps, and writes both:
+- `plan.json` — execution source of truth (hooks read this, updated during execution)
+- `masterPlan.md` — user-facing proposal for Orbit review (write-once, frozen after approval)
 
 Follow **persistent-plans Phase 1** (Create the Plan) for the structural
 rules — the writing-plans skill handles the content.
@@ -131,6 +148,22 @@ Initialize the plan directory if needed:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/init-plan-dir.sh
 ```
+
+### Plan review via Orbit
+
+After writing the plan, present masterPlan.md to the user for review
+using the Orbit MCP. The `writing-plans` skill handles the details, but
+the flow is:
+
+1. Discover Orbit tools: `ToolSearch query: "+orbit await_review"`
+2. Call `orbit_await_review` on the masterPlan.md — opens in VS Code and
+   blocks until the user approves or requests changes
+3. Handle the response (approved → proceed, changes_requested → iterate)
+4. Once approved — proceed with plan mode handoff (EnterPlanMode →
+   summarize → ExitPlanMode) for context clearing
+
+The plan mode handoff happens **after** Orbit approval, not before. This
+ensures the user has reviewed and approved the plan before context clears.
 
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
 obvious single-line change.
@@ -142,6 +175,12 @@ obvious single-line change.
 Follow **persistent-plans Phase 2** (Execute the Plan) for the execution
 loop, checkpointing, and result tracking. Follow **engineering-discipline
 Phase 2** (Make Changes Carefully) for the rules applied during execution.
+
+For refactoring tasks, also follow the execution order from
+`look-before-you-leap:refactoring` Phase 3 — it minimizes broken
+intermediate states (e.g., create at new location first, then update
+consumers, then delete old location). After all changes, its Phase 4
+verifies against the contract and regenerates stale dep maps.
 
 The sections below cover behavior that is unique to the conductor and not
 covered in the companion skills.
@@ -195,21 +234,21 @@ synthesize results.
 
 ### Post-step simplification
 
-When a completed step has `Simplify: true` in the plan, dispatch a
-refactoring sub-agent (quick mode) after marking the step `[x]`:
+When a completed step has `simplify: true` in plan.json, dispatch a
+refactoring sub-agent (quick mode) after marking the step `done`:
 
 1. **Run tests first** — establish a passing baseline before dispatch
 2. **Dispatch** the `refactoring` sub-agent in quick mode (foreground) with:
-   - The step number and its "Files involved" list
+   - The step number and its `files` list from plan.json
    - The active plan path
 3. **After the agent returns**, record its simplification summary in the
-   step's Result field
+   step's `result` field
 4. If the agent reverted changes due to test failures, note that too
 
 The simplifier is opt-in per step. The `writing-plans` skill decides which
 steps warrant it based on complexity (3+ files modified, new abstractions,
 structural changes, or user request). Do not dispatch it for steps without
-`Simplify: true`.
+`simplify: true`.
 
 ---
 
@@ -243,53 +282,48 @@ bash .temp/plan-mode/scripts/resume.sh         # find what to pick up
 This plugin enforces discipline through hooks, not just instructions:
 
 - **SessionStart**: Injects the full conductor, engineering-discipline, and
-  persistent-plans skills into every session. Detects active plans and
-  shows resumption instructions. Discovers other installed plugins. On
-  first run, auto-detects the project stack and creates the local config.
+  persistent-plans skills into every session. Detects active plans (via
+  plan.json) and shows resumption instructions. Discovers other installed
+  plugins. On first run, auto-detects the project stack and creates the
+  local config.
 - **UserPromptSubmit**: On first run (when `.claude/.onboarding-pending`
   marker exists), injects onboarding instructions to walk the user through
   setup: stack summary, config enrichment, CLAUDE.md creation, plugin
   suggestions. Fires once, then removes the marker.
 - **PreToolUse(Edit|Write)**: Blocks code edits if no active plan exists
-  in `.temp/plan-mode/active/`. Allows edits to `.temp/` (plan files).
-  Bypass for trivial changes: `echo $PPID > .temp/plan-mode/.no-plan`
-  (session-scoped, auto-expires when session ends).
-- **PreToolUse(Edit|Write)**: Soft warning when editing API boundary files
-  (route handlers, API routes, schema/validator files, frontend API client
-  calls). Reminds Claude to check for shared types and schemas. Does not
-  block — surfaces a reminder with the api-contracts checklist.
-- **PreToolUse(Bash)**: Blocks Bash commands that write files (redirects,
-  sed -i, tee, etc.) when no active plan exists. Prevents using Bash to
-  bypass the Edit/Write enforcement. Allows git, package managers, build
-  tools, and writes to `.temp/`. Also blocks `mv` of plan directories
-  from `active/` to `completed/` if the plan has unchecked items.
-- **PostToolUse(Edit|Write)**: Counts code file edits. After 3 edits
-  without updating masterPlan.md, injects a checkpoint reminder. Resets
-  when any plan file is edited.
-- **PostToolUse(Edit|Write)**: When a masterPlan.md is edited, migrates
-  any fallback discovery file (`.temp/discovery/`) into the plan directory
-  and checks if all steps are `[x]`. If all complete, injects a reminder
-  to verify, re-read the original request, update Completed Summary, and
-  report before moving the plan to `completed/`.
+  in `.temp/plan-mode/active/` (checks plan.json, falls back to
+  masterPlan.md). Allows edits to `.temp/` (plan files). Bypass for
+  trivial changes: `echo $PPID > .temp/plan-mode/.no-plan`.
+- **PreToolUse(Edit|Write)**: **Hard deny** when `.handoff-pending` marker
+  exists and plan is still fresh. Blocks all code edits until Orbit review
+  + plan mode handoff is complete. Includes ToolSearch guidance for
+  orbit_await_review. Bypass: `rm .temp/plan-mode/.handoff-pending`.
+- **PreToolUse(Edit|Write)**: Soft warning when editing API boundary files.
+  Reminds Claude to check for shared types and schemas.
+- **PreToolUse(Bash)**: Blocks Bash file-writing commands when no active
+  plan exists. Also blocks `mv` of plan directories from `active/` to
+  `completed/` if the plan has unfinished steps (checked via plan.json).
+- **PreToolUse(Grep)**: **Hard deny** when grepping for import/consumer
+  patterns and dep maps are configured. Forces use of `deps-query.py`.
+- **PostToolUse(Edit|Write)**: Counts code file edits. After 5 edits
+  without updating plan files, injects a checkpoint reminder. Resets when
+  any plan file (plan.json or masterPlan.md) is edited.
+- **PostToolUse(Edit|Write)**: When plan.json or masterPlan.md is edited,
+  migrates any fallback discovery file and checks if all steps are done
+  (via plan.json). If all complete, injects a reminder to verify and
+  finalize before moving to `completed/`.
+- **PostToolUse(Edit|Write)**: When a fresh plan is written (all steps
+  pending in plan.json), creates `.handoff-pending` marker and injects
+  directive for Orbit review + plan mode handoff.
+- **PostToolUse(Edit|Write)**: When a step transitions to done, creates
+  `.verify-pending-N` marker and injects directive to dispatch a
+  verification sub-agent. Code edits are blocked until verification passes.
 - **PostToolUse(Edit|Write)**: When `.ts`/`.tsx` files are edited, marks
-  the corresponding dep map module as stale for lazy regeneration on the
-  next `deps-query.py` invocation. Silent — no output.
-- **PostToolUse(Edit|Write)**: When a fresh masterPlan.md is written (all
-  steps `[ ]`, none `[x]`/`[~]`), creates `.handoff-pending` marker and
-  injects directive to do the plan mode handoff (EnterPlanMode → summarize
-  → ExitPlanMode). The PreToolUse(Edit|Write) hook shows a soft warning
-  (not a hard block) while the marker exists. The marker auto-clears when
-  any step is marked `[x]` or `[~]` (execution started), or when the plan
-  file is missing/stale. Also cleared by SessionStart.
-- **PreToolUse(Grep)**: When grepping for import/consumer patterns and dep
-  maps are configured, injects a reminder to use `deps-query.py` instead.
-  Does not block — serves as a guardrail against falling back to grep when
-  a better tool exists.
+  the corresponding dep map module as stale. Silent — no output.
 - **PreToolUse(Task)**: Automatically injects engineering discipline into
-  every sub-agent prompt. Sub-agents receive the core rules (no scope cuts,
-  no type shortcuts, blast radius, verification) plus active plan path.
-- **Stop**: Blocks Claude from stopping if the active plan has unchecked
-  items. Forces explicit completion, status update, or user communication.
+  every sub-agent prompt.
+- **Stop**: Blocks Claude from stopping if the active plan has unfinished
+  steps (checked via plan.json). Forces explicit completion or status update.
 
 **NEVER bypass hooks.** If a hook blocks an action, follow the process it
 describes. Do not use alternative tools to work around it. Do not call it
@@ -305,8 +339,8 @@ All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
 ### Process & Templates
 - `references/exploration-protocol.md` — 8-question exploration checklist
 - `references/exploration-guide.md` — deep exploration techniques
-- `references/master-plan-format.md` — masterPlan.md template with structured discovery
-- `references/sub-plan-format.md` — sub-plan and sweep templates
+- `references/plan-schema.md` — plan.json schema (execution source of truth)
+- `references/master-plan-format.md` — masterPlan.md template (user-facing proposal)
 - `references/claude-md-snippet.md` — recommended CLAUDE.md addition
 
 ### Discipline Checklists (Layer 2)
@@ -336,5 +370,6 @@ All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
 - `scripts/init-plan-dir.sh` — initialize `.temp/plan-mode/` directory
 - `scripts/plan-status.sh` — show status of all active plans
 - `scripts/resume.sh` — find what to resume after compaction
+- `scripts/plan_utils.py` — read/update plan.json (used by hooks and Claude)
 - `scripts/deps-query.py` — query dependency maps for consumers and dependencies
 - `scripts/deps-generate.py` — generate or regenerate dependency maps

@@ -4,11 +4,10 @@ Single source of truth for request/response types. Schemas live in a
 shared package (not inside individual apps). If the frontend and backend
 disagree on a type, there's a bug — the only question is when you'll find it.
 
-> **Config-aware**: If the project keeps Codex or Claude local config
-> (`.codex/lbyl.local.md` or `.claude/look-before-you-leap.local.md`),
-> check `structure.shared_api_package`, `stack.backend`, and
-> `stack.validation`. The advice below uses generic terms — substitute your
-> project's actual values.
+> **Config-aware**: If the project documents API-package structure in
+> `AGENTS.md`, a repo-local Codex config file, or similar local guidance,
+> read that first and substitute the project's actual package names,
+> backend stack, and validation library below.
 
 ## Before
 

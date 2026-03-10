@@ -75,9 +75,9 @@ Once approved:
    ```
 2. Write the design to `.temp/plan-mode/active/<plan-name>/design.md`
    using the structure below
-3. Invoke `lbyl-writing-plans` to create `masterPlan.md`
+3. Invoke `lbyl-writing-plans` to create `plan.json` and `masterPlan.md`
    in the same directory — the design feeds directly into the plan's
-   Context and Discovery Summary
+   discovery and user-facing proposal
 
 **Stop here.** The next step is the implementation plan, not code.
 

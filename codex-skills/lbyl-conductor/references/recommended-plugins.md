@@ -1,44 +1,31 @@
-# Recommended Plugins
+# Recommended Companion Tooling
 
-Official Anthropic plugins from `claude-plugins-official`. Suggest these
-during first-run onboarding based on the detected stack.
+Codex does not use Claude plugin manifests. During onboarding, suggest the
+smallest set of companion skills or tools that materially improves this
+project's workflow.
 
-## Universal (recommend for all projects)
+## Universal
 
-| Plugin | What it does |
+| Tooling | Why suggest it |
 |---|---|
-| `commit-commands` | `/commit`, `/commit-push-pr`, branch cleanup |
-| `pr-review-toolkit` | Parallel PR review with 5 specialized agents |
-| `code-review` | Code review a pull request |
-| `claude-md-management` | Audit and improve CLAUDE.md files |
-| `hookify` | Create hooks to prevent unwanted behaviors |
-| `context7` | Up-to-date library docs via MCP |
+| `context7` or an equivalent docs MCP | Pull current library docs without leaving the coding flow |
+| `gh-address-comments` | Useful when the repo workflow revolves around PR review loops |
+| `gh-fix-ci` | Useful when users regularly debug failing GitHub Actions checks |
+| `lbyl-agent-setup` | Tightens project-local `AGENTS.md` guidance for Codex sessions |
 
-## Stack-specific
+## Task-specific
 
-| Plugin | When to suggest | Detected by |
-|---|---|---|
-| `typescript-lsp` | TypeScript projects | `stack.language == "TypeScript"` |
-| `pyright-lsp` | Python projects | `stack.language == "Python"` |
-| `frontend-design` | Projects with a frontend framework | `stack.frontend` is set |
-| `security-guidance` | Projects handling auth, APIs, user data | `disciplines.security == true` |
-| `feature-dev` | Larger projects that benefit from guided development | Always suggest |
-| `plugin-dev` | Only if user is developing Claude Code plugins | Ask user |
-| `agent-sdk-dev` | Only if user is building Agent SDK apps | Ask user |
-
-## Niche (mention but don't push)
-
-| Plugin | When |
+| Tooling | When to suggest |
 |---|---|
-| `code-simplifier` | User wants automated code simplification (note: `look-before-you-leap` now includes this as refactoring quick mode — only suggest if user doesn't have `look-before-you-leap`) |
-| `skill-creator` | User wants to create custom skills |
+| `lbyl-frontend-design` | The repo includes meaningful web UI work and the user wants distinctive, production-grade frontend output |
+| `immersive-frontend` | The user needs cinematic or motion-heavy web experiences |
+| `react-native-mobile` | The repo targets React Native or Expo apps |
+| `security-best-practices` | The user explicitly asks for security review or secure-by-default guidance |
+| `security-threat-model` | The user wants repository-grounded threat modeling |
+| `lbyl-skill-creator` | The user wants to create, port, evaluate, or improve skills |
 
-## Install command
+## Guidance
 
-```
-claude plugin install <name>@claude-plugins-official --scope <scope>
-```
-
-Scopes:
-- `user` — available in all your projects (recommended default)
-- `project` — only this repository (stored in `.claude/plugins.json`)
+- Prefer skills already available in the current session over inventing a new workflow.
+- Suggest new tooling only when it meaningfully reduces repeated manual work.
+- If Orbit is available, prefer `orbit_await_review` for plan review instead of ad hoc artifact flows.

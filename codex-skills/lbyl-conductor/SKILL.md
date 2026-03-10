@@ -1,6 +1,6 @@
 ---
 name: lbyl-conductor
-description: "Unified engineering discipline for ALL coding tasks. Three layers: this file (the conductor), quick-reference checklists, and deep guides. Enforces structured exploration before planning, persistent plans that survive compaction, disciplined execution with blast radius tracking and type safety, and multi-discipline coverage (testing, UI consistency, security, git, linting, dependencies). Use for every task that touches source files — no exceptions, no shortcuts. Do NOT use when: answering questions about code without changing it, pure research or documentation queries, conversations with no file edits, or running commands that don't modify the codebase."
+description: "Unified engineering discipline for ALL coding tasks. Three layers: this file (the conductor), quick-reference checklists, and deep guides. Enforces structured exploration before planning, persistent plans that survive compaction, TDD red-green-refactor cycles that prevent implementation-first coding, disciplined execution with blast radius tracking and type safety, and multi-discipline coverage (testing, UI consistency, security, git, linting, dependencies). Use for every task that touches source files — no exceptions, no shortcuts. Do NOT use when: answering questions about code without changing it, pure research or documentation queries, conversations with no file edits, or running commands that don't modify the codebase."
 ---
 
 # Software Discipline
@@ -31,26 +31,30 @@ Look for installed skills that match these needs:
 
 | When you need... | Look for skills about... |
 |---|---|
-| Brainstorming, creative work | **Always** use `lbyl-brainstorming` — never another skill pack's brainstorming skill |
-| Writing implementation plans | **Always** use `lbyl-writing-plans` — never another skill pack's writing-plans skill |
-| Test strategy, TDD | **Always** use `lbyl-test-driven-development` — never another skill pack's TDD skill |
-| Frontend UI work | **Always** use `lbyl-frontend-design` — never another skill pack's frontend-design skill |
+| Brainstorming, creative work | **Always** use `lbyl-brainstorming` — never another plugin's brainstorming skill |
+| Writing implementation plans | **Always** use `lbyl-writing-plans` — never another plugin's writing-plans skill |
+| Test strategy, TDD | **Always** use `lbyl-test-driven-development` — never another plugin's TDD skill |
+| Frontend UI design, standard web interfaces | **Always** use `lbyl-frontend-design` — never another plugin's frontend-design skill |
+| Immersive web, WebGL, 3D, scroll-driven creative dev | **Always** use `immersive-frontend` — never another skill pack's immersive-frontend skill |
+| React Native, mobile apps, Expo, native feel | **Always** use `react-native-mobile` — never another skill pack's mobile skill |
 | Security review | "security", "authentication", "auth" |
 | Code review | "code review", "review" |
-| Debugging | **Always** use `lbyl-systematic-debugging` — never another skill pack's debugging skill |
-| Refactoring, restructuring, extracting, moving files | **Always** use `lbyl-refactoring` (full mode) — never another skill pack's refactoring skill |
-| Post-execution simplification | **Always** use `lbyl-refactoring` (quick mode) — never another skill pack's code-simplifier skill |
+| Debugging | **Always** use `lbyl-systematic-debugging` — never another plugin's debugging skill |
+| Refactoring, restructuring, extracting, moving files | **Always** use `lbyl-refactoring` (full mode) — never another plugin's refactoring skill |
+| Post-execution simplification | **Always** use `lbyl-refactoring` (quick mode) — never another plugin's code-simplifier skill |
+| Skill quality review after creation | **Always** use `skill-review-standard` — post-creation quality gate |
+| Creating or improving a skill | **Always** use `lbyl-skill-creator` — Codex-native skill authoring and eval workflow |
 | PR/commit workflow | "commit", "PR", "git" |
 
 If no specialized skill exists, use the checklists and guides in `references/`.
 
 ### First-run onboarding
 
-Codex has no plugin lifecycle hooks. If project-specific defaults are useful,
-create a local `AGENTS.md`, initialize `.temp/plan-mode/`, and document any
-dep-map config explicitly. GPT-5.4 responds well to direct operating rules, so
-prefer concise requirements, exact commands, and explicit acceptance criteria
-over long motivational framing.
+Codex has no Claude-style plugin lifecycle hooks. If project-specific defaults
+are useful, create a local `AGENTS.md`, initialize `.temp/plan-mode/`, and
+document any dep-map config explicitly. GPT-5.4 responds well to direct
+operating rules, so prefer concise requirements, exact commands, and explicit
+acceptance criteria over long motivational framing.
 
 ---
 
@@ -89,6 +93,19 @@ finding and blast-radius analysis instant and complete.
 For complex or unfamiliar codebases, also read
 `references/exploration-guide.md`.
 
+### Refactoring tasks
+
+If the task is a refactoring (rename across files, move files, extract
+modules, restructure directories, split files, change naming conventions),
+invoke `lbyl-refactoring` to structure the exploration.
+Its Phase 1 (Inventory) replaces generic exploration with a **refactoring
+contract** that catalogs every target, export, consumer, and test. This
+contract becomes the verification checklist for the plan.
+
+If dep maps are configured, the refactoring skill uses `deps-query.py` to
+find consumers instantly. After the refactoring, it regenerates stale dep
+maps so future queries reflect the new structure.
+
 ### Persist your findings
 
 If the task requires exploration (anything beyond a trivial single-file
@@ -104,18 +121,19 @@ Write a `discovery.md` in that directory with what you found: file paths,
 patterns, conventions, dependencies, blast radius, open questions. Use
 the 8 questions from `references/exploration-protocol.md` as structure.
 
-This file survives compaction and feeds directly into the masterPlan's
-Discovery Summary. If you skip this, your future compacted self starts
+This file survives compaction and feeds directly into the plan's
+discovery section. If you skip this, your future compacted self starts
 from zero.
 
 ---
 
 ## Step 2: Plan (write to disk before editing code)
 
-**Invoke `lbyl-writing-plans`** to produce the masterPlan.
+**Invoke `lbyl-writing-plans`** to produce the plan.
 The skill consumes your discovery.md, identifies applicable discipline
-checklists, structures TDD-granularity steps, and writes the masterPlan
-to `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+checklists, structures TDD-granularity steps, and writes both:
+- `plan.json` — execution source of truth (Codex reads and updates this during execution)
+- `masterPlan.md` — user-facing proposal for Orbit review (write-once, frozen after approval)
 
 Follow **persistent-plans Phase 1** (Create the Plan) for the structural
 rules — the writing-plans skill handles the content.
@@ -125,26 +143,25 @@ Initialize the plan directory if needed:
 bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 ```
 
-Exception: the user explicitly says "just do it" or "no plan" for a trivially
-obvious single-line change.
-
 ### Plan review via Orbit
 
-Present each newly written `masterPlan.md` through Orbit before starting
-source edits:
+After writing the plan, present masterPlan.md to the user for review
+using the Orbit MCP. The `writing-plans` skill handles the details, but
+the flow is:
 
-1. Call `orbit_generate_resolved` with the absolute `masterPlan.md` path.
-2. Tell the user the plan is open in VS Code for review and they can comment,
-   approve, or request changes there.
-3. Use `orbit_get_review_state` and `orbit_list_threads` with `status: "open"`
-   to inspect review state after the user responds or when they ask for status.
-4. If the plan needs changes, update `masterPlan.md`, reply on each handled
-   thread with `orbit_reply`, resolve completed threads with
-   `orbit_resolve_thread`, regenerate the resolved artifact, and loop.
-5. Start execution only after the plan is approved or the user explicitly says
-   to skip Orbit review.
-6. If an Orbit action fails unexpectedly, treat that as a setup problem to
-   surface to the user. Do not silently fall back to a non-Orbit review path.
+1. If the Orbit MCP is available, call `orbit_await_review` on the
+   masterPlan.md — it opens in VS Code and
+   blocks until the user approves or requests changes
+2. Handle the response (approved → proceed, changes_requested → iterate)
+3. Once approved, summarize the plan for the user and proceed unless they
+   explicitly ask for more changes or to stop after planning
+
+If Orbit MCP tools are unavailable or fail unexpectedly, treat that as a
+setup problem to surface explicitly to the user. Do not silently fall back
+to a weaker manual review flow.
+
+Exception: the user explicitly says "just do it" or "no plan" for a trivially
+obvious single-line change.
 
 ---
 
@@ -153,6 +170,12 @@ source edits:
 Follow **persistent-plans Phase 2** (Execute the Plan) for the execution
 loop, checkpointing, and result tracking. Follow **engineering-discipline
 Phase 2** (Make Changes Carefully) for the rules applied during execution.
+
+For refactoring tasks, also follow the execution order from
+`lbyl-refactoring` Phase 3 — it minimizes broken
+intermediate states (e.g., create at new location first, then update
+consumers, then delete old location). After all changes, its Phase 4
+verifies against the contract and regenerates stale dep maps.
 
 The sections below cover behavior that is unique to the conductor and not
 covered in the companion skills.
@@ -186,8 +209,8 @@ single discovery file:
 **Location**: `.temp/plan-mode/active/<plan-name>/discovery.md`
 
 This file is created during Step 1 (Explore) when the plan directory is
-set up. When dispatching parallel agents, pass this path explicitly so
-findings are shared.
+set up. When dispatching sub-agents, pass the active plan path and this
+discovery path explicitly.
 
 **Writing** — use Bash append (`>>`), never `Edit`. Multiple agents write
 concurrently, and append is atomic at the OS level:
@@ -206,21 +229,21 @@ synthesize results.
 
 ### Post-step simplification
 
-When a completed step has `Simplify: true` in the plan, dispatch a
-refactoring sub-agent (quick mode) after marking the step `[x]`:
+When a completed step has `simplify: true` in plan.json, dispatch a
+refactoring sub-agent (quick mode) after marking the step `done`:
 
 1. **Run tests first** — establish a passing baseline before dispatch
 2. **Dispatch** the `refactoring` sub-agent in quick mode (foreground) with:
-   - The step number and its "Files involved" list
+   - The step number and its `files` list from plan.json
    - The active plan path
 3. **After the agent returns**, record its simplification summary in the
-   step's Result field
+   step's `result` field
 4. If the agent reverted changes due to test failures, note that too
 
 The simplifier is opt-in per step. The `writing-plans` skill decides which
 steps warrant it based on complexity (3+ files modified, new abstractions,
 structural changes, or user request). Do not dispatch it for steps without
-`Simplify: true`.
+`simplify: true`.
 
 ---
 
@@ -252,17 +275,18 @@ bash .temp/plan-mode/scripts/resume.sh         # find what to pick up
 ## Codex-Specific Operating Notes
 
 Codex does not have Claude plugin hooks or plan mode. That means the process
-here is enforced by explicit skill text and by your own execution discipline.
+here is enforced by explicit skill text, local `AGENTS.md`, on-disk plans,
+helper scripts, and Orbit-backed review tooling.
 
-- Treat plan creation, plan checkpoints, and verification as hard
-  requirements even when nothing blocks you automatically.
+- Treat plan creation, Orbit review, plan checkpoints, and verification as
+  hard requirements even when nothing blocks you automatically.
+- `plan.json` is the execution source of truth. `masterPlan.md` is the
+  frozen user-facing proposal reviewed through Orbit.
 - When dispatching sub-agents, include the active plan path and any shared
   discovery path in the prompt explicitly.
-- Favor concise, concrete instructions. GPT-5.4 handles long-horizon work
-  well when the contract is clear: exact files, exact commands, exact
-  acceptance criteria.
-- If a repo adds its own `AGENTS.md`, follow that local contract first and
-  use this skill pack as the shared baseline.
+- Orbit review should use `orbit_await_review` when available; do not fall
+  back to a weaker manual flow unless the user explicitly asks to skip Orbit
+  or Orbit is unavailable and you surface that setup issue.
 
 ---
 
@@ -273,9 +297,9 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 ### Process & Templates
 - `references/exploration-protocol.md` — 8-question exploration checklist
 - `references/exploration-guide.md` — deep exploration techniques
-- `references/master-plan-format.md` — masterPlan.md template with structured discovery
-- `references/sub-plan-format.md` — sub-plan and sweep templates
-- `references/agents-md-snippet.md` — optional `AGENTS.md` snippet for reinforcing the discipline locally
+- `references/plan-schema.md` — plan.json schema (execution source of truth)
+- `references/master-plan-format.md` — masterPlan.md template (user-facing proposal)
+- `references/agents-md-snippet.md` — recommended AGENTS.md addition
 
 ### Discipline Checklists (Layer 2)
 - `references/testing-checklist.md` — before/during/after testing
@@ -300,9 +324,10 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 
 ### Operational
 - `references/verification-commands.md` — type checker/linter/test commands by ecosystem
-- `references/recommended-plugins.md` — upstream reference list; optional reading when you want adjacent tooling ideas
+- `references/recommended-plugins.md` — suggested companion tooling for onboarding
 - `scripts/init-plan-dir.sh` — initialize `.temp/plan-mode/` directory
 - `scripts/plan-status.sh` — show status of all active plans
 - `scripts/resume.sh` — find what to resume after compaction
+- `scripts/plan_utils.py` — read/update plan.json from Codex sessions and helper scripts
 - `scripts/deps-query.py` — query dependency maps for consumers and dependencies
 - `scripts/deps-generate.py` — generate or regenerate dependency maps

@@ -1,15 +1,15 @@
 ---
 name: lbyl-writing-plans
-description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces masterPlan.md that assumes the implementing engineer has zero codebase context and questionable taste. Every masterPlan step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its Progress items. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
+description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces both plan.json (execution source of truth) and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
 ---
 
 # Writing Plans
 
 Turn discovery findings into bite-sized implementation plans. Assume the
 implementing engineer has zero context for this codebase and questionable
-taste. Document everything they need: which files to touch, complete code,
-exact commands, expected output. Give them the whole plan as bite-sized
-tasks. DRY. YAGNI. TDD. Frequent commits.
+taste. Document everything they need: which files to touch, precise
+descriptions with file paths, exact commands, expected output. Give them
+the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 
 **Announce at start:** "I'm using the writing-plans skill to create the
 implementation plan."
@@ -23,19 +23,29 @@ in the plan directory, go back to Step 1 (Explore) first.
 
 ### 1. Read the discovery
 
-Read `discovery.md` from `.temp/plan-mode/active/<plan-name>/`. Understand
-the scope, entry points, consumers, existing patterns, test infrastructure,
-and blast radius. This feeds directly into the masterPlan.
+Read `discovery.md` from `.temp/plan-mode/active/<plan-name>/`. This is the
+raw exploration log — an append-only markdown file written during Step 1.
+
+**Discovery flow** (each written once, never updated during execution):
+1. **`discovery.md`** — raw exploration log (may have duplicates, rough notes)
+2. **`plan.json.discovery`** — structured extraction: the 8 discovery fields
+   distilled from the raw log into clean, self-contained summaries
+3. **`masterPlan.md` Discovery Summary** — human-readable rendering of the
+   same findings for Orbit review
+
+Read discovery.md and extract what you need into plan.json's `discovery`
+object. masterPlan.md's Discovery Summary is a human rendering of the same
+data — both are written once during planning, then frozen.
 
 If dep maps are configured, the discovery MUST include `deps-query.py` output
-for every file in scope. This output powers accurate blast-radius analysis in
-the plan — without it, consumer counts and cross-module impacts are guesses.
-If the discovery lacks deps-query output for a TypeScript project, go back to
-Step 1 (Explore) and run it before planning.
+for every file in scope. If the discovery lacks deps-query output for a
+TypeScript project, go back to Step 1 (Explore) and run it before planning.
 
-If the brainstorming skill produced a `design.md` in the same plan
-directory (`.temp/plan-mode/active/<plan-name>/design.md`), read that
-too — it contains the approved design decisions.
+**design.md**: If the brainstorming skill produced a `design.md` in the same
+plan directory, read it — it contains approved design decisions that must
+inform the plan. Reference specific design decisions in step descriptions
+where relevant (e.g., "Per design.md: use composition over inheritance for
+the validator chain").
 
 ### 2. Identify applicable disciplines
 
@@ -56,156 +66,174 @@ not planning):
 - **git-checklist.md** — applies at every commit step
 - **linting-checklist.md** — applies after any code changes
 
-### 3. Write the masterPlan
+### 3. Write the plan (dual output)
 
-Use the template from `references/master-plan-format.md`. Write to
-`.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+Produce **both** files in `.temp/plan-mode/active/<plan-name>/`:
 
-The Discovery Summary in the masterPlan comes directly from your
-discovery.md findings.
+#### plan.json — execution source of truth
 
-#### Plan document header
+Use the schema from `references/plan-schema.md`. This file is what Codex
+reads and updates during execution. Include:
 
-Every masterPlan MUST include this directive after the title so that a
-fresh session knows how to execute it:
+- All discovery findings in the `discovery` object
+- Steps with TDD-granularity progress items
+- Inline sub-plans for large steps (see Step 4 below)
+- Exact skill identifiers in `skill` fields
 
-```markdown
-# Plan: <Title>
+#### masterPlan.md — user-facing proposal (write-once)
 
-> **For Codex:** REQUIRED SKILL: Use lbyl-engineering-discipline
-> for all steps. Also invoke each step's `Skill` field when it is not `none`.
-> See the Required Skills section for the full list.
+This is the document the user reviews via Orbit. It communicates **intent**,
+not execution state. **It is frozen after Orbit approval** — never updated
+during execution. All runtime state lives in plan.json.
+
+Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
+checkboxes. No execution state. Just what, why, and what could go wrong.
+
+#### Step granularity: how steps map to TDD
+
+One plan.json step = one component or feature unit. The TDD rhythm lives
+in the **progress** array within each step.
+
+**The key insight: each step must have MULTIPLE red-green cycles.** Don't
+write all tests at once — that's speculative testing, not TDD. Instead,
+break the behavior into slices and iterate: simplest case first, then add
+complexity one behavior at a time. Each cycle adds 1-3 tests for one
+specific behavior, then implements just enough to pass.
+
+```json
+{
+  "id": 1,
+  "title": "Email validation utility",
+  "status": "pending",
+  "skill": "lbyl-test-driven-development",
+  "simplify": false,
+  "files": ["src/lib/validate-email.ts", "tests/lib/validate-email.test.ts"],
+  "description": "Add email validation function. Rejects empty strings, missing @, missing domain.",
+  "acceptanceCriteria": "npx vitest run validate-email passes, tsc --noEmit clean.",
+  "progress": [
+    {"task": "Cycle 1 RED: test for simplest valid email", "status": "pending", "files": ["tests/lib/validate-email.test.ts"]},
+    {"task": "Cycle 1 GREEN: implement basic validation", "status": "pending", "files": ["src/lib/validate-email.ts"]},
+    {"task": "Cycle 2 RED: tests for empty string and missing @", "status": "pending", "files": ["tests/lib/validate-email.test.ts"]},
+    {"task": "Cycle 2 GREEN: add rejection logic", "status": "pending", "files": ["src/lib/validate-email.ts"]},
+    {"task": "Cycle 3 RED: tests for missing domain and edge cases", "status": "pending", "files": ["tests/lib/validate-email.test.ts"]},
+    {"task": "Cycle 3 GREEN: handle remaining cases", "status": "pending", "files": ["src/lib/validate-email.ts"]},
+    {"task": "Refactor and final verification", "status": "pending"}
+  ],
+  "subPlan": null,
+  "result": null
+}
 ```
 
-#### Granularity: how steps map to TDD
+Each progress item is one action (2-5 minutes). Notice the pattern:
+alternating RED/GREEN items, each covering a slice of behavior. The
+simplest case comes first. Aim for **3-5 cycles per step** — enough to
+prove incrementalism without being tedious.
 
-One masterPlan Step = one component or feature unit. The TDD rhythm lives
-in the **Progress** checklist within each step:
+**Anti-pattern to avoid:** A single "Write all tests" item followed by a
+single "Implement everything" item. That's test-first waterfall, not TDD.
+The whole point of TDD is that each cycle's implementation informs what
+the next cycle should test.
 
-```markdown
-### Step N: <Component Name>
-- **Status**: [ ] pending
-- **Skill**: `lbyl-test-driven-development` | none
-- **Simplify**: true/false
-- **Files involved**: `src/auth/validator.ts`, `tests/auth/validator.test.ts`
-- **Description**: Add email validation to the auth module.
-- **Acceptance criteria**: `npm test -- validator` passes, tsc clean.
-- **Progress**:
-  - [ ] Write failing test
-  - [ ] Run test — verify it fails
-  - [ ] Implement minimal code to pass
-  - [ ] Run tests — verify they pass
-  - [ ] Commit
-- **Result**:
-```
+#### When to set `simplify: true`
 
-Each Progress item is one action (2-5 minutes).
-
-#### When to set `Simplify: true`
-
-Set `Simplify: true` on a step when any of these apply:
+Set `simplify: true` on a step when any of these apply:
 
 - Step modifies **3 or more files**
 - Step creates **new abstractions** (utilities, components, modules)
 - Step involves **structural changes** (refactored APIs, new patterns)
 - User **explicitly requests** simplification for the step
 
-Default to `false` for simple steps (1-2 files, straightforward changes).
-When in doubt, leave it `false` — the user can always request a
-simplification pass manually.
+Default to `false` for simple steps.
 
 #### Key rules
 
-- **Exact skill identifiers** — in Required Skills AND in each step's
-  `Skill` field, use the full skill name (e.g., `lbyl-frontend-design`),
-  never vague hints like "look for skills about testing". Post-compaction
-  Codex has no memory — only exact names let it invoke the right skill.
-  Use `none` for steps that don't need a specialized skill.
-- **Complete code in every step** — not "add validation" but the actual
-  code the engineer should write
-- **Exact file paths** — every step lists Create/Modify/Test files
-- **Exact commands with expected outcome** — include the command to run and
-  the expected outcome (pass/fail, exit code, key output lines), not
-  necessarily full verbatim output
-- **Self-contained** — the masterPlan is the ONLY thing the executing
+- **Exact skill identifiers** — in each step's `skill` field, use the full
+  skill name (e.g., `lbyl-frontend-design`), never vague
+  hints. Post-compaction Codex has no memory — only exact names work.
+  Use `"none"` for steps that don't need a specialized skill.
+- **Precise descriptions with file paths** — not vague "add validation" but
+  specific what-to-do with exact file paths and acceptance criteria. Plans
+  describe *what* to build; the executing engineer writes the code.
+- **Exact file paths** — every step lists files in the `files` array
+- **Exact commands with expected outcome** — in description or acceptance
+  criteria, include the command and expected result
+- **Self-contained** — the plan.json is the ONLY thing the executing
   engineer reads. If it's not in the plan, it doesn't exist for them
 - **DRY / YAGNI** — cut anything not clearly needed right now
 - **Frequent commits** — after every green test or logical unit of work
 
-#### Concrete example
+### 4. Evaluate sub-plan needs (mandatory checkpoint)
 
-````markdown
-### Step 1: Email validation utility
+**Before saving the plan, evaluate EVERY step against these criteria:**
 
-- **Status**: [ ] pending
-- **Skill**: none
-- **Simplify**: false
-- **Files involved**:
-  - Create: `src/lib/validate-email.ts`
-  - Create: `tests/lib/validate-email.test.ts`
-- **Description**: Add an email validation function. Rejects empty strings,
-  missing @, missing domain. Returns `{ valid: boolean; error?: string }`.
-- **Acceptance criteria**: `npx vitest run validate-email` passes, `tsc --noEmit` clean.
-- **Progress**:
-  - [ ] Write failing test
-  - [ ] Run: `npx vitest run validate-email` — expect FAIL (module not found)
-  - [ ] Implement minimal code
-  - [ ] Run: `npx vitest run validate-email` — expect PASS
-  - [ ] Commit: `git add src/lib/validate-email.ts tests/lib/validate-email.test.ts && git commit -m "feat: add email validation utility"`
+For each step, count the files in its `files` array. If ANY of these are
+true, the step MUST have an inline `subPlan` with groups:
 
-**Test code:**
-```typescript
-import { validateEmail } from '../src/lib/validate-email'
+1. **More than 10 files** in the `files` array
+2. **Repetitive sweep** — the description contains words like "all", "every",
+   "sweep", "migrate all", "across the codebase"
+3. **More than 5 progress items** that are independently completable
+4. **More than 8 files to read** just to understand what to change
+5. **The step is a migration** that touches the same pattern in many files
 
-test('rejects empty string', () => {
-  expect(validateEmail('')).toEqual({ valid: false, error: 'Email is required' })
-})
+If ANY criterion is met, restructure the step NOW:
 
-test('rejects missing @', () => {
-  expect(validateEmail('foo')).toEqual({ valid: false, error: 'Invalid email format' })
-})
-
-test('accepts valid email', () => {
-  expect(validateEmail('user@example.com')).toEqual({ valid: true })
-})
-```
-
-**Implementation code:**
-```typescript
-export function validateEmail(email: string): { valid: boolean; error?: string } {
-  if (!email) return { valid: false, error: 'Email is required' }
-  if (!email.includes('@') || !email.split('@')[1]?.includes('.')) {
-    return { valid: false, error: 'Invalid email format' }
+```json
+{
+  "subPlan": {
+    "groups": [
+      {"name": "Dashboard pages", "files": ["a.tsx", "b.tsx", "c.tsx"], "status": "pending", "notes": null},
+      {"name": "Modal components", "files": ["d.tsx", "e.tsx"], "status": "pending", "notes": null}
+    ]
   }
-  return { valid: true }
 }
 ```
-````
 
-### 4. Present for review, then hand off to execution
+Groups should have 3-8 files each. If a group exceeds 8, split it.
 
-After saving the masterPlan to disk:
+**This is a hard checkpoint.** Do not proceed to Step 5 until every step
+has been evaluated. If you skip this, large steps will fail mid-execution
+when context runs out.
 
-1. Read the masterPlan back from disk.
-2. Call `orbit_generate_resolved` with the absolute `masterPlan.md` path so
-   the plan opens in VS Code as a reviewable artifact.
-3. Tell the user the plan is ready for Orbit review in VS Code and wait for
-   them to approve it, request changes, or ask you to check status.
-4. Inspect the review with `orbit_get_review_state` and `orbit_list_threads`
-   using `status: "open"`.
-5. If there are requested changes or open threads that require action, update
-   `masterPlan.md`, answer each addressed thread with `orbit_reply`, resolve
-   completed threads with `orbit_resolve_thread`, regenerate the resolved
-   artifact, and loop until approval.
-6. Once approved, summarize the plan to the user with key steps, files
+### 5. Present for review via Orbit
+
+After saving both files to disk, present masterPlan.md to the user for
+interactive review using the Orbit MCP:
+
+1. Tell the user: *"The plan is open in VS Code for review. Add inline
+   comments on any section, then click Approve or Request Changes."*
+2. If the Orbit MCP is available, call `orbit_await_review` with the
+   masterPlan.md path. This generates
+   the artifact, opens it in VS Code, and **blocks** until the user clicks
+   Approve or Request Changes.
+
+If Orbit MCP tools are unavailable or fail unexpectedly, stop and surface
+the setup issue instead of silently skipping review.
+
+#### Handle the response
+
+`orbit_await_review` returns JSON with `status` and `threads`.
+
+- **`approved`, no threads** → proceed to step 6.
+- **`approved`, with threads** → read each thread, reply with
+  `orbit_reply` acknowledging the feedback, resolve threads, then proceed
+  to step 6.
+- **`changes_requested`** → read all threads. Update both masterPlan.md
+  and plan.json to address the feedback. Reply to each thread explaining
+  what changed. Resolve threads. Call `orbit_await_review` again for
+  re-review. Loop back to handle the new response.
+- **`timeout`** → tell the user the review timed out and ask them to
+  review when ready.
+
+### 6. Summarize and proceed (post-approval)
+
+After the plan is approved via Orbit:
+
+1. Read the plan.json and masterPlan.md you just wrote from disk.
+2. Summarize the approved plan to the user with the key steps, files
    involved, and acceptance criteria.
-7. Proceed unless the user explicitly asks to revise the plan first or to skip
-   Orbit review.
-8. If an Orbit action fails unexpectedly, stop and surface the setup problem
-   instead of silently falling back to a non-Orbit review path.
-
-The masterPlan is still the source of truth. During execution, follow
-`lbyl-persistent-plans` and update the plan on disk every 2-3 file edits.
+3. Proceed into execution unless the user explicitly asks for more plan
+   revisions or says to stop after planning.
 
 ---
 
@@ -217,17 +245,18 @@ This skill must NOT:
   defined directory structure, nowhere else.
 - **Modify discovery.md during planning** — discovery is read-only input.
   If you find gaps, go back to Step 1 (Explore) first.
-- **Overwrite an existing masterPlan.md without user consent** — if a plan
-  already exists in the target directory, ask before replacing it.
-- **Hide a non-trivial plan from the user** — present it through Orbit and
-  summarize it before execution unless they explicitly said to skip Orbit
-  review.
+- **Overwrite an existing plan without user consent** — if a plan already
+  exists in the target directory, ask before replacing it.
+- **Skip the Orbit review** — every plan must be presented to the user
+  for review via Orbit MCP before execution.
+- **Pretend `masterPlan.md` is the runtime tracker** — execution state
+  belongs in `plan.json`, not in the Orbit-reviewed proposal.
 - **Write implementation code** — this skill produces plans, not code files.
-  Code belongs in the plan's code blocks, not in the project source tree.
+- **Skip the sub-plan evaluation** — Step 4 is mandatory for every plan.
 
-**Autonomy limits**: reading discovery, reading checklists, writing
-masterPlan.md, and writing sub-plans are autonomous. Overwriting an existing
-plan requires user confirmation.
+**Autonomy limits**: reading discovery, reading checklists, writing plan
+files, and writing sub-plans are autonomous. Overwriting an existing plan
+and skipping Orbit review for a non-trivial plan require user confirmation.
 
 **Prerequisites**: this skill is always invoked via `lbyl-conductor` at
 Step 2. Discovery must be complete (`discovery.md` must exist in the plan
@@ -239,7 +268,12 @@ directory).
 
 - **Zero-context, questionable taste** — spell everything out; don't trust
   the engineer to make good test design or naming decisions
-- **One component per step** — TDD rhythm in Progress items, not separate steps
+- **One component per step** — TDD rhythm in progress items, not separate steps
 - **TDD by default** — test first, then implement, always
-- **Complete code** — never write "add error handling", write the actual code
+- **Precise descriptions** — never write vague "add error handling"; specify
+  exactly what to do, which files, and how to verify. Plans describe intent;
+  the executing engineer writes the code.
+- **masterPlan.md is write-once** — frozen after Orbit approval. All runtime
+  state lives in plan.json
 - **DRY / YAGNI** — only what's needed now, nothing speculative
+- **Sub-plans are mandatory** — if a step meets the criteria, it gets one

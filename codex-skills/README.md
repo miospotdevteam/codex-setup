@@ -14,6 +14,7 @@ Codex-native port of the `look-before-you-leap` discipline system.
 - `lbyl-frontend-design`
 - `lbyl-brainstorming`
 - `lbyl-agent-setup`
+- `lbyl-skill-creator`
 
 ## Install
 
@@ -59,6 +60,7 @@ Ask for the skills explicitly:
 - `Use lbyl-test-driven-development for this feature.`
 - `Use lbyl-systematic-debugging for this bug.`
 - `Use lbyl-agent-setup to create a project AGENTS.md for this repo.`
+- `Use lbyl-skill-creator to add or improve a Codex skill.`
 
 ## Codex-specific notes
 
@@ -66,8 +68,9 @@ Ask for the skills explicitly:
   skill text, local `AGENTS.md`, on-disk plans, and Orbit-backed MCP review
   tooling.
 - The conductor assumes the companion skills are active for coding work.
-- Persistent plans live in `.temp/plan-mode/active/`.
+- Persistent plans use `plan.json` as execution state and `masterPlan.md` as
+  the frozen Orbit-reviewed proposal.
 - Dep maps, when used, are configured from `.codex/lbyl-deps.json`.
 - In the default Codex workflow for this repo, new plan artifacts go through
-  Orbit review in VS Code before execution proceeds unless the user explicitly
+  `orbit_await_review` before execution proceeds unless the user explicitly
   skips that review.

@@ -166,7 +166,7 @@ proptest, etc.) if available.
 | Anti-Pattern | Why It Fails | Correct Approach |
 |---|---|---|
 | Write implementation + tests together | Tests validate existing code, don't drive design | Separate Red and Green into distinct phases |
-| Write all tests upfront | Speculative — you'll guess wrong about edge cases | Iterate: small Red, small Green, repeat |
+| Write all tests upfront in one batch | Speculative — you'll guess wrong about edge cases, and you lose the feedback loop that makes TDD valuable | Iterate: 1-3 tests per cycle, implement, repeat for at least 3 cycles |
 | Test implementation details | Brittle — breaks on any refactor | Test behavior (inputs -> outputs) |
 | Skip the Red phase verification | You don't know if the test actually tests anything | Always run and confirm failure first |
 | Skip the Refactor phase | Technical debt accumulates silently | Always refactor after Green |
