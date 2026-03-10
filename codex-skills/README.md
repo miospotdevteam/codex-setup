@@ -5,6 +5,7 @@ Codex-native port of the `look-before-you-leap` discipline system.
 ## Included skills
 
 - `lbyl-conductor`
+- `lbyl-cost-optimization`
 - `lbyl-engineering-discipline`
 - `lbyl-persistent-plans`
 - `lbyl-writing-plans`

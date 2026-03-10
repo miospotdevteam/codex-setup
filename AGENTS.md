@@ -6,6 +6,7 @@ This repository contains a Codex port of the `look-before-you-leap` discipline p
 
 Codex-native skills:
 - `codex-skills/lbyl-conductor`
+- `codex-skills/lbyl-cost-optimization`
 - `codex-skills/lbyl-engineering-discipline`
 - `codex-skills/lbyl-persistent-plans`
 - `codex-skills/lbyl-writing-plans`

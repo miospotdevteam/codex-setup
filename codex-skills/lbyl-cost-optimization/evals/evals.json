@@ -1,0 +1,59 @@
+{
+  "skill_name": "lbyl-cost-optimization",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the cost-optimization skill to review whether our new public pricing page should be static HTML, a server-rendered Next.js page, or a client-heavy page with live pricing widgets. I care about loading speed, caching, analytics overhead, and long-term spend.",
+      "expected_output": "The skill triggers and performs a design review focused on rendering mode, caching, payload cost, and third-party/script tradeoffs.",
+      "assertions": [
+        "Announces it is using the cost-optimization skill",
+        "Treats the task as design review mode",
+        "Evaluates static vs dynamic rendering",
+        "Discusses caching and invalidation explicitly",
+        "Covers loading and third-party analytics/script overhead",
+        "Produces a decision plus a prioritized action plan"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Can you audit this repo for where our AI, messaging, analytics, and storage costs are probably coming from? I want concrete savings ideas, not just a cloud bill summary.",
+      "expected_output": "The skill triggers and performs an audit grounded in repo evidence, including cost surfaces, existing controls, and concrete implementation recommendations.",
+      "assertions": [
+        "Treats the task as audit mode",
+        "Builds a cost surface inventory",
+        "Covers both vendor spend and infrastructure pressure",
+        "Identifies existing controls such as cache, quota, or rate limit logic",
+        "Recommends concrete implementation patterns rather than generic advice"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "This API route is slow. Please debug the bug and fix it.",
+      "expected_output": "The skill does not trigger because the user asked for bug fixing without a cost or tradeoff angle.",
+      "assertions": [
+        "Does NOT invoke the cost-optimization skill",
+        "Routes toward debugging or general engineering instead"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "What are the tradeoffs if we call Anthropic on every search query versus using deterministic filters first and only falling back to AI sometimes?",
+      "expected_output": "The skill triggers automatically because the user asked about tradeoffs involving provider usage and unit economics.",
+      "assertions": [
+        "Invokes the cost-optimization skill even without explicit naming",
+        "Analyzes model/API usage as a cost surface",
+        "Compares always-on provider calls against fallback or pre-filter strategies",
+        "Discusses both spend and user-experience impact"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Can you review this feature branch for correctness and missing tests?",
+      "expected_output": "The skill does not trigger because this is a normal code review request with no cost, loading, caching, or provider tradeoff question.",
+      "assertions": [
+        "Does NOT invoke the cost-optimization skill",
+        "Treats the request as a normal review instead"
+      ]
+    }
+  ]
+}
