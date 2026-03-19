@@ -75,3 +75,6 @@ Ask for the skills explicitly:
 - In the default Codex workflow for this repo, new plan artifacts go through
   `orbit_await_review` before execution proceeds unless the user explicitly
   skips that review.
+- When the skill pack itself causes a workflow error in another session, log
+  it back to this repo under `usage-errors/`, preferably via
+  `bash ~/Projects/codex-setup/scripts/log-usage-error.sh "short title"`.

@@ -60,6 +60,31 @@ document any dep-map config explicitly. GPT-5.4 responds well to direct
 operating rules, so prefer concise requirements, exact commands, and explicit
 acceptance criteria over long motivational framing.
 
+### Skill feedback logging
+
+When you are working in some other repo and discover that the LBYL skill pack
+itself caused a bad workflow, misleading instruction, missed requirement, or
+other usage error, log it back to the `codex-setup` repo.
+
+Count it as a usage error when the problem is about the skill guidance rather
+than the target repo's own code. Finish or stabilize the user's main task
+first when possible, then log the incident before final closeout.
+
+Resolve the repo path in this order:
+
+1. `LBYL_CODEX_SETUP_REPO`
+2. `~/Projects/codex-setup`
+3. `~/projects/codex-setup`
+
+Preferred flow:
+
+1. Run `bash <repo>/scripts/log-usage-error.sh "short title"` to create the
+   markdown stub in `<repo>/usage-errors/`.
+2. Fill in the report with concrete evidence: what happened, what should have
+   happened, why it is skill-related, and the smallest plausible fix.
+3. Mention in your final response that you logged the usage error, or explain
+   clearly if the repo was unavailable and you could not log it.
+
 ---
 
 ## Step 1: Explore (mandatory before any task)
@@ -301,6 +326,9 @@ helper scripts, and Orbit-backed review tooling.
 - Orbit review should use `orbit_await_review` when available; do not fall
   back to a weaker manual flow unless the user explicitly asks to skip Orbit
   or Orbit is unavailable and you surface that setup issue.
+- Skill-pack usage errors discovered in other repos should be written back to
+  the `codex-setup` checkout under `usage-errors/` before final closeout when
+  feasible.
 
 ---
 
@@ -314,6 +342,7 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 - `references/plan-schema.md` — plan.json schema (execution source of truth)
 - `references/master-plan-format.md` — masterPlan.md template (user-facing proposal)
 - `references/agents-md-snippet.md` — recommended AGENTS.md addition
+- `usage-errors/README.md` in the resolved `codex-setup` checkout — usage-error report format and logging rules
 
 ### Discipline Checklists (Layer 2)
 - `references/testing-checklist.md` — before/during/after testing

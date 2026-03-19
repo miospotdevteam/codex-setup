@@ -66,6 +66,32 @@ onboarding instructions are injected into the context telling you to:
 Follow those instructions when they appear. On subsequent sessions (config
 already exists), no onboarding is injected — proceed normally.
 
+### Skill feedback logging
+
+When this shipped copy of `look-before-you-leap` is being used in another repo
+and you discover that the skill pack itself caused a bad workflow, misleading
+instruction, missed requirement, or other usage error, log it back to the
+`codex-setup` repo.
+
+Count it as a usage error when the problem is about the skill guidance rather
+than the target repo's own code. Finish or stabilize the user's main task
+first when possible, then log the incident before final closeout.
+
+Resolve the repo path in this order:
+
+1. `LBYL_CODEX_SETUP_REPO`
+2. `~/Projects/codex-setup`
+3. `~/projects/codex-setup`
+
+Preferred flow:
+
+1. Run `bash <repo>/scripts/log-usage-error.sh "short title"` to create the
+   markdown stub in `<repo>/usage-errors/`.
+2. Fill in the report with concrete evidence: what happened, what should have
+   happened, why it is skill-related, and the smallest plausible fix.
+3. Mention in your final response that you logged the usage error, or explain
+   clearly if the repo was unavailable and you could not log it.
+
 ---
 
 ## Step 1: Explore (mandatory before any task)
@@ -395,6 +421,10 @@ Before declaring done, re-read the user's original request word by word.
 Confirm every requirement is implemented and working. If anything is
 unaddressed, finish it or explicitly flag it.
 
+If the skill pack itself caused a usage error in this session, log it back to
+the `codex-setup` checkout under `usage-errors/` before final closeout when
+feasible.
+
 ---
 
 ## Compaction Survival Protocol
@@ -441,6 +471,7 @@ All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
 **Read during exploration:**
 - `references/exploration-protocol.md` — 8-question checklist (answer ALL before planning)
 - `references/plan-schema.md` — full plan.json schema (read when writing a plan)
+- `usage-errors/README.md` in the resolved `codex-setup` checkout — usage-error report format and logging rules
 
 **Read when a step involves that discipline:**
 - `references/testing-checklist.md`, `references/security-checklist.md`,

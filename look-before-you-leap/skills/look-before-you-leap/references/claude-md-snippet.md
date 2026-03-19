@@ -24,4 +24,10 @@ mode — not optional.
 ### Verification
 - Run type checker, linter, and tests after every task
 - Check `references/verification-commands.md` for framework-specific commands
+
+### Skill Feedback
+- If look-before-you-leap itself causes a workflow error or misleading instruction, log it back to `codex-setup` before final closeout when feasible
+- Preferred helper: `bash "${LBYL_CODEX_SETUP_REPO:-$HOME/Projects/codex-setup}/scripts/log-usage-error.sh" "short title"`
+- If the repo lives elsewhere, set `LBYL_CODEX_SETUP_REPO` to that checkout first
+- After creating the stub, fill in what happened, expected behavior, why it is skill-related, and the smallest plausible fix
 ```

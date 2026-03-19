@@ -41,6 +41,7 @@ Upstream skills also shipped from this repo:
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Verify with project typecheck, lint, and relevant tests before declaring done.
+- If a future session uncovers a failure caused by the LBYL skill pack itself, log it here under `usage-errors/`, preferably via `bash scripts/log-usage-error.sh "short title"`.
 - Never silently drop requested scope.
 
 ### Install

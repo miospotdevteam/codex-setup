@@ -135,6 +135,19 @@ By default, the Codex skill pack presents new plans through Orbit for review
 with `orbit_await_review` before execution starts unless the user explicitly
 skips that review.
 
+If a future session discovers that the skill pack itself caused a bad
+workflow, missed requirement, or other usage error, log it back here under
+`usage-errors/`. Preferred helper:
+
+```bash
+bash ~/Projects/codex-setup/scripts/log-usage-error.sh "short title"
+```
+
+If this repo lives elsewhere on that machine, set
+`LBYL_CODEX_SETUP_REPO=/absolute/path/to/codex-setup` first. See
+[`usage-errors/README.md`](/Users/robertobortolaso/Projects/codex-setup/usage-errors/README.md)
+for the report format.
+
 ## Sync policy
 
 When the Claude repo evolves:
