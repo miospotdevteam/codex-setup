@@ -39,6 +39,12 @@ description_override_for_skill() {
     react-native-mobile)
       printf '%s\n' "Build premium React Native mobile apps with native-feeling motion, gestures, haptics, platform conventions, accessibility, and performance discipline. Use for Expo or React Native product work targeting iOS and Android."
       ;;
+    lbyl-frontend-design)
+      printf '%s\n' "Create distinctive, production-grade frontend interfaces. Use for web pages and UI components where typography, color, hierarchy, responsiveness, and visual direction matter."
+      ;;
+    svg-art)
+      printf '%s\n' "Generate distinctive SVG artwork in code for illustrations, patterns, textures, dividers, filters, and decorative backgrounds without external image assets."
+      ;;
     *)
       return 1
       ;;
