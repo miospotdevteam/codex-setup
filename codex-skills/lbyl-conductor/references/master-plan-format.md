@@ -10,6 +10,13 @@ updated during execution. All runtime state (progress, results, deviations)
 lives in `plan.json`. This keeps the proposal document as a stable record
 of what was agreed upon.
 
+After approval, execution may still add **non-material follow-through** in
+plan.json without rewriting masterPlan.md. Use this for adjacent
+consistency work, mirrored fixes, extra verification, and other small
+execution-time additions that stay within the approved objective. If the
+objective, risk profile, or tradeoff changes materially, revise the plan
+and get a fresh Orbit review instead of silently stretching the old one.
+
 No `[x]`/`[ ]` checkboxes. No progress tracking. No result fields.
 Just what, why, and what could go wrong.
 

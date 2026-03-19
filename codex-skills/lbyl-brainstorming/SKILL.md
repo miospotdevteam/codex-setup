@@ -1,12 +1,12 @@
 ---
 name: lbyl-brainstorming
-description: "Use before any creative work — new features, components, behavior changes. Turns vague ideas into concrete designs through collaborative dialogue before any code is written. Do NOT use for: implementation planning (use writing-plans), debugging (use systematic-debugging), refactoring (use refactoring), or pure codebase exploration without a design goal."
+description: "Use when a task has unresolved design ambiguity with materially different approaches. Best for new features, components, workflows, or behavior changes where multiple plausible UX, API, data-model, or architecture choices exist and the right answer is not already implied by user direction or repo patterns. Do NOT use for implementation planning (use writing-plans), debugging, bug fixes, refactoring, migrations, audits, or executing an already-written plan."
 ---
 
 # Brainstorming
 
-Turn ideas into designs before writing code. Understand what you're
-building, explore approaches, get approval, then plan.
+Turn ambiguous ideas into designs before writing code. Understand what
+you're building, explore approaches, get approval, then plan.
 
 **Announce at start:** "I'm using the brainstorming skill to explore the
 design before any code is written."
@@ -14,6 +14,27 @@ design before any code is written."
 **No code until the design is approved.** No exceptions, no matter how
 simple the task seems. Simple tasks are where unexamined assumptions
 waste the most time.
+
+Use this skill only when the task needs a real design choice, not just
+careful execution.
+
+## Trigger gate
+
+Use brainstorming when all of these are true:
+
+- There are at least 2 plausible approaches
+- The choice materially affects UX, API shape, data model, architecture,
+  or long-term maintenance
+- The right answer is not already implied by the user's direction or
+  established repo patterns
+
+Skip brainstorming when any of these are true:
+
+- The task is mainly implementation, cleanup, or execution of an existing plan
+- The repo already has a clear pattern to follow
+- The user already provided the concrete design or execution sequence
+- The task is a bug fix, audit, migration, refactor, or review
+- The desired outcome is known and the only question is how to implement it
 
 ---
 
@@ -43,7 +64,8 @@ Focus on:
 - What does success look like?
 - What are the constraints?
 
-Keep going until you could explain the feature to another engineer.
+Keep going until you could explain the feature to another engineer and
+clearly justify why the chosen approach beats the alternatives.
 
 If the user **can't answer** a question (doesn't know constraints yet,
 hasn't decided), propose reasonable defaults and flag them explicitly as

@@ -104,6 +104,13 @@ This is the document the user reviews via Orbit. It communicates **intent**,
 not execution state. **It is frozen after Orbit approval** — never updated
 during execution. All runtime state lives in plan.json.
 
+This freeze does **not** mean execution should stop for another approval
+every time adjacent follow-through is discovered. After approval, keep
+executing through the approved objective. If you discover non-material
+follow-through that is clearly in service of the same objective, update
+only plan.json and continue. Reserve a new Orbit review for material scope
+or tradeoff changes (see "Updating an existing plan" below).
+
 Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
 checkboxes. No execution state. Just what, why, and what could go wrong.
 
@@ -310,6 +317,11 @@ prompt. If they accept, context clears and the persistent-plans resumption
 protocol picks up the plan.json automatically — execution follows the
 conductor's Step 3 with engineering-discipline.
 
+From this point forward, the default is **continue execution**. Do not ask
+for another approval just because you found adjacent consistency work,
+mirrored fixes, extra verification, or other non-material follow-through
+needed to finish the approved objective correctly.
+
 ---
 
 ## Updating an existing plan
@@ -317,8 +329,29 @@ conductor's Step 3 with engineering-discipline.
 If the user changes requirements during planning (before Orbit approval),
 update BOTH plan.json and masterPlan.md to reflect the new scope. If the
 user changes requirements AFTER Orbit approval (during execution), update
-only plan.json — masterPlan.md is frozen. Record the deviation in
-plan.json's `deviations` array so the change is visible after compaction.
+only plan.json — masterPlan.md is frozen.
+
+Treat post-approval changes in 2 categories:
+
+- **Non-material follow-through** → update only plan.json and continue.
+  This includes adjacent consistency fixes, mirrored changes in equivalent
+  copies, extra verification, docs/tests/cleanup needed to make the
+  approved work correct, or small step additions in the same area.
+- **Material scope or tradeoff change** → stop and get fresh review before
+  proceeding. Update plan.json to reflect the newly discovered work, then
+  revise masterPlan.md and present it through Orbit again.
+
+Treat a change as **material** when any of these are true:
+
+- It changes the user-visible goal or acceptance criteria in a meaningful way
+- It introduces a new product, UX, API, or architecture direction
+- It expands into a substantially new subsystem or unrelated file area
+- It requires a risky, destructive, or irreversible action not covered by
+  the approved plan
+
+Record all post-approval additions in plan.json. Use the `deviations`
+array when execution meaningfully diverges from the approved baseline,
+even if the change is still non-material enough to avoid a new review.
 
 If a plan already exists in the target directory and you're asked to
 rewrite it, read the existing plan first to understand what changed. Do
@@ -344,8 +377,10 @@ This skill must NOT:
 - **Skip the sub-plan evaluation** — Step 4 is mandatory for every plan.
 
 **Autonomy limits**: reading discovery, reading checklists, writing plan
-files, and writing sub-plans are autonomous. Overwriting an existing plan
-and skipping the user-approval handoff require user confirmation.
+files, writing sub-plans, and updating plan.json for non-material
+post-approval follow-through are autonomous. Overwriting an existing plan,
+skipping the user-approval handoff, and materially changing an approved
+plan require user confirmation.
 
 **Prerequisites**: this skill is always invoked via the `look-before-you-leap`
 conductor at Step 2. `${CLAUDE_PLUGIN_ROOT}` must resolve for reference file
@@ -365,5 +400,7 @@ directory).
   the executing engineer writes the code.
 - **masterPlan.md is write-once** — frozen after Orbit approval. All runtime
   state lives in plan.json
+- **Approved plan means proceed** — after Orbit approval, keep executing
+  unless a material scope/tradeoff change requires a fresh review
 - **DRY / YAGNI** — only what's needed now, nothing speculative
 - **Sub-plans are mandatory** — if a step meets the criteria, it gets one

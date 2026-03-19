@@ -31,7 +31,7 @@ Look for installed skills that match these needs:
 
 | When you need... | Look for skills about... |
 |---|---|
-| Brainstorming, creative work | **Always** use `lbyl-brainstorming` — never another plugin's brainstorming skill |
+| Consequential design ambiguity with multiple plausible approaches | **Always** use `lbyl-brainstorming` — never another plugin's brainstorming skill |
 | Writing implementation plans | **Always** use `lbyl-writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | **Always** use `lbyl-test-driven-development` — never another plugin's TDD skill |
 | Frontend UI design, standard web interfaces | **Always** use `lbyl-frontend-design` — never another plugin's frontend-design skill |
@@ -51,6 +51,25 @@ Look for installed skills that match these needs:
 | PR/commit workflow | "commit", "PR", "git" |
 
 If no specialized skill exists, use the checklists and guides in `references/`.
+
+### Brainstorming gate
+
+Before invoking `lbyl-brainstorming`, check all 3 conditions:
+
+1. There are at least 2 plausible approaches
+2. The choice materially affects UX, API shape, data model, architecture,
+   or long-term maintenance
+3. The correct choice is not already implied by user direction or
+   established repo patterns
+
+If all 3 are true, use `lbyl-brainstorming`.
+
+If any condition is false, skip brainstorming and continue with discovery,
+planning, or execution as appropriate.
+
+Do not route to brainstorming for bug fixes, audits, refactors, migrations,
+template sweeps, visual polish with a known target, or execution of an
+already-written plan.
 
 ### First-run onboarding
 
@@ -185,6 +204,11 @@ the flow is:
 3. Once approved, summarize the plan for the user and proceed unless they
    explicitly ask for more changes or to stop after planning
 
+After approval, the default is to **continue through implementation**. Do
+not stop for another approval just because execution uncovers adjacent
+in-scope follow-through. Update plan.json and keep going unless the newly
+discovered work is a material scope or tradeoff change.
+
 If Orbit MCP tools are unavailable or fail unexpectedly, treat that as a
 setup problem to surface explicitly to the user. Do not silently fall back
 to a weaker manual review flow.
@@ -199,6 +223,15 @@ obvious single-line change.
 Follow **persistent-plans Phase 2** (Execute the Plan) for the execution
 loop, checkpointing, and result tracking. Follow **engineering-discipline
 Phase 2** (Make Changes Carefully) for the rules applied during execution.
+
+Use this post-approval rule during execution:
+
+- **Non-material follow-through** — update only plan.json and continue.
+  Examples: mirrored fixes in equivalent copies, adjacent consistency
+  updates, extra verification, or cleanup/tests/docs needed to make the
+  approved work correct.
+- **Material scope or tradeoff change** — stop and get user confirmation,
+  then present a revised plan for review if needed.
 
 For refactoring tasks, also follow the execution order from
 `lbyl-refactoring` Phase 3 — it minimizes broken

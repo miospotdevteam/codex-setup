@@ -32,6 +32,9 @@ Every plan consists of two files:
 Hooks read `plan.json`. You update `plan.json`. The user reviews
 `masterPlan.md` once during planning. After approval, only plan.json
 changes — masterPlan.md is a stable record of what was agreed upon.
+That means execution should keep moving after approval. Non-material
+follow-through belongs in plan.json; only material scope or tradeoff
+changes warrant another Orbit review.
 
 ---
 
@@ -82,9 +85,10 @@ This skill must NOT:
 - **Move a plan to `completed/` with non-done items** — a hook enforces
   this, but the rule is the skill's, not just the hook's.
 
-**Autonomy limits**: creating plans, writing to plan files, and updating
-progress are autonomous. Deleting plans, skipping blocked steps, and
-deviating from the plan require user confirmation.
+**Autonomy limits**: creating plans, writing to plan files, updating
+progress, and adding non-material post-approval follow-through to plan.json
+are autonomous. Deleting plans, skipping blocked steps, and materially
+deviating from the approved plan require user confirmation.
 
 **Prerequisites**: this skill is always invoked via the `look-before-you-leap`
 conductor. `${CLAUDE_PLUGIN_ROOT}` must resolve for reference file paths. All
@@ -547,7 +551,8 @@ engineering-discipline ensures the work is done correctly.
 | Step touches >10 files or is a sweep | Use inline subPlan with groups |
 | After any compaction | Read plan.json IMMEDIATELY -> state where you are -> continue |
 | User says "continue" | Read plan.json -> find next step -> execute |
-| Requirements changed | Update plan.json -> continue execution |
+| Requirements changed, non-material and in service of approved goal | Update plan.json -> continue execution |
+| Requirements changed, material or risky | Update plan.json -> ask user -> fresh review if needed |
 | Stuck or blocked | update-step blocked -> ask user |
 | All steps complete | Final verification -> move plan to completed/ -> report to user |
 

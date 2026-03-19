@@ -183,4 +183,11 @@ Its purpose:
 All runtime state (progress, results, completed summaries, deviations)
 lives exclusively in plan.json.
 
+After approval, plan.json may also absorb **non-material follow-through**
+that is clearly in service of the same approved objective. Examples:
+mirrored fixes, adjacent consistency updates, extra verification, and
+small cleanup/docs/tests needed to finish the approved work correctly.
+If the scope, risk, or tradeoff changes materially, do not silently keep
+stretching plan.json — revise the plan and get a fresh Orbit review.
+
 See `references/master-plan-format.md` for the template.

@@ -31,7 +31,7 @@ Look for installed skills that match these needs:
 
 | When you need... | Look for skills about... |
 |---|---|
-| Brainstorming, creative work | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
+| Consequential design ambiguity with multiple plausible approaches | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
 | Writing implementation plans | **Always** use `look-before-you-leap:writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | **Always** use `look-before-you-leap:test-driven-development` — never another plugin's TDD skill |
 | Frontend UI design, standard web interfaces | **Always** use `look-before-you-leap:frontend-design` — never another plugin's frontend-design skill |
@@ -50,6 +50,25 @@ Look for installed skills that match these needs:
 | PR/commit workflow | "commit", "PR", "git" |
 
 If no specialized skill exists, use the checklists and guides in `references/`.
+
+### Brainstorming gate
+
+Before invoking `look-before-you-leap:brainstorming`, check all 3 conditions:
+
+1. There are at least 2 plausible approaches
+2. The choice materially affects UX, API shape, data model, architecture,
+   system design, or long-term maintenance
+3. The correct choice is not already implied by user direction or
+   established repo patterns
+
+If all 3 are true, use `look-before-you-leap:brainstorming`.
+
+If any condition is false, skip brainstorming and continue with discovery,
+planning, or execution as appropriate.
+
+Do not route to brainstorming for bug fixes, audits, refactors, migrations,
+template sweeps, visual polish with a known target, or execution of an
+already-written plan.
 
 ### First-run onboarding
 
@@ -103,14 +122,13 @@ saves five minutes fixing.
 
 Before exploring, classify the task:
 
-- **Brainstorm first** if the task adds new user-facing behavior, introduces
-  a new abstraction, or has more than one reasonable design approach. Invoke
+- **Brainstorm first** only when the brainstorming gate above passes. Invoke
   `look-before-you-leap:brainstorming` — it produces a `design.md` that
-  feeds into Step 2. Examples: "add priority to tasks", "build a dashboard",
-  "add team permissions". If in doubt, brainstorm — it's cheap.
+  feeds into Step 2. Examples: choosing between materially different
+  workflow, API, or architecture shapes for a new capability.
 - **Explore directly** if the task is a bug fix, a rename/refactor, a
-  config change, or the implementation path is unambiguous (e.g., "add
-  field X to existing type Y and propagate").
+  config change, execution of an existing plan, or the implementation path
+  is unambiguous (e.g., "add field X to existing type Y and propagate").
 
 ### Exploration protocol
 
@@ -246,6 +264,11 @@ the flow is:
 The plan mode handoff happens **after** Orbit approval, not before. This
 ensures the user has reviewed and approved the plan before context clears.
 
+After approval, the default is to **continue through implementation**. Do
+not stop for another approval just because execution uncovers adjacent
+in-scope follow-through. Update plan.json and keep going unless the newly
+discovered work is a material scope or tradeoff change.
+
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
 obvious single-line change.
 
@@ -256,6 +279,15 @@ obvious single-line change.
 Follow **persistent-plans Phase 2** (Execute the Plan) for the execution
 loop, checkpointing, and result tracking. Follow **engineering-discipline
 Phase 2** (Make Changes Carefully) for the rules applied during execution.
+
+Use this post-approval rule during execution:
+
+- **Non-material follow-through** — update only plan.json and continue.
+  Examples: mirrored fixes in equivalent copies, adjacent consistency
+  updates, extra verification, or cleanup/tests/docs needed to make the
+  approved work correct.
+- **Material scope or tradeoff change** — stop and get user confirmation,
+  then present a revised plan for review if needed.
 
 ### Execution ordering: definitions before consumers
 
