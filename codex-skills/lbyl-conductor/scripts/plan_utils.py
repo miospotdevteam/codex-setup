@@ -13,6 +13,7 @@ CLI usage:
     python3 plan-utils.py update-progress <plan.json> <step_id> <progress_index> <new_status>
     python3 plan-utils.py add-summary <plan.json> <summary_text>
     python3 plan-utils.py add-deviation <plan.json> <deviation_text>
+    python3 plan-utils.py complete-plan <plan.json>
     python3 plan-utils.py is-fresh <plan.json>
     python3 plan-utils.py is-complete <plan.json>
     python3 plan-utils.py find-active <project_root>
@@ -20,6 +21,7 @@ CLI usage:
 
 import json
 import os
+import shutil
 import sys
 
 
@@ -78,6 +80,59 @@ def is_complete(plan):
     if not steps:
         return False
     return all(s["status"] == "done" for s in steps)
+
+
+def get_plan_dirs(plan_path):
+    """Resolve the plan directory plus active/completed siblings.
+
+    Returns a tuple of (plan_dir, active_dir, completed_dir).
+    """
+    plan_dir = os.path.dirname(os.path.abspath(plan_path))
+    active_dir = os.path.dirname(plan_dir)
+    completed_dir = os.path.join(os.path.dirname(active_dir), "completed")
+    return plan_dir, active_dir, completed_dir
+
+
+def complete_plan(plan_path):
+    """Mark a fully done active plan completed and move it to completed/."""
+    plan_dir, active_dir, completed_dir = get_plan_dirs(plan_path)
+    active_basename = os.path.basename(active_dir)
+
+    if active_basename != "active":
+        print(
+            f"Error: complete-plan only works on plans inside active/. Got: {plan_path}",
+            file=sys.stderr,
+        )
+        return False
+
+    plan = read_plan(plan_path)
+    if not is_complete(plan):
+        print("Error: cannot complete a plan with unfinished steps", file=sys.stderr)
+        return False
+
+    if any(step.get("status") == "blocked" for step in plan.get("steps", [])):
+        print("Error: cannot complete a plan with blocked steps", file=sys.stderr)
+        return False
+
+    if plan.get("blocked"):
+        print("Error: cannot complete a plan with blocked items listed", file=sys.stderr)
+        return False
+
+    destination = os.path.join(completed_dir, os.path.basename(plan_dir))
+    if os.path.exists(destination):
+        print(
+            f"Error: destination already exists in completed/: {destination}",
+            file=sys.stderr,
+        )
+        return False
+
+    plan["status"] = "completed"
+    write_plan(plan_path, plan)
+
+    os.makedirs(completed_dir, exist_ok=True)
+    shutil.move(plan_dir, destination)
+    print(destination)
+    return True
 
 
 def update_step_status(plan_path, step_id, new_status):
@@ -247,6 +302,10 @@ def main():
             sys.exit(1)
         text = sys.argv[3]
         add_deviation(plan_path, text)
+
+    elif command == "complete-plan":
+        if not complete_plan(plan_path):
+            sys.exit(1)
 
     elif command == "is-fresh":
         plan = read_plan(plan_path)

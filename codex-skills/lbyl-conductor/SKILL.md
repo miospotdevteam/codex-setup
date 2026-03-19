@@ -35,6 +35,7 @@ Look for installed skills that match these needs:
 | Writing implementation plans | **Always** use `lbyl-writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | **Always** use `lbyl-test-driven-development` — never another plugin's TDD skill |
 | Frontend UI design, standard web interfaces | **Always** use `lbyl-frontend-design` — never another plugin's frontend-design skill |
+| SVG art, illustrations, patterns, textures, generative art | **Always** use `svg-art` — installed from the vendored upstream skill pack |
 | Immersive web, WebGL, 3D, scroll-driven creative dev | **Always** use `immersive-frontend` — never another skill pack's immersive-frontend skill |
 | React Native, mobile apps, Expo, native feel | **Always** use `react-native-mobile` — never another skill pack's mobile skill |
 | Security review | "security", "authentication", "auth" |
@@ -43,6 +44,9 @@ Look for installed skills that match these needs:
 | Refactoring, restructuring, extracting, moving files | **Always** use `lbyl-refactoring` (full mode) — never another plugin's refactoring skill |
 | Post-execution simplification | **Always** use `lbyl-refactoring` (quick mode) — never another plugin's code-simplifier skill |
 | Skill quality review after creation | **Always** use `skill-review-standard` — post-creation quality gate |
+| Webapp, E2E, or browser automation testing | **Always** use `webapp-testing` — installed from the vendored upstream skill pack |
+| MCP server development | **Always** use `mcp-builder` — installed from the vendored upstream skill pack |
+| Writing docs, specs, RFCs, or proposals | **Always** use `doc-coauthoring` — installed from the vendored upstream skill pack |
 | Creating or improving a skill | **Always** use `lbyl-skill-creator` — Codex-native skill authoring and eval workflow |
 | PR/commit workflow | "commit", "PR", "git" |
 
@@ -258,6 +262,16 @@ Before declaring done, re-read the user's original request word by word.
 Confirm every requirement is implemented and working. If anything is
 unaddressed, finish it or explicitly flag it.
 
+If the active plan's steps are all `done`, finalize the plan before the
+final user closeout:
+
+```bash
+python3 .temp/plan-mode/scripts/plan_utils.py complete-plan .temp/plan-mode/active/<plan-name>/plan.json
+```
+
+Do not leave a fully executed plan sitting in `active/`. The work is not
+closed out until the plan has been finalized and moved to `completed/`.
+
 ---
 
 ## Compaction Survival Protocol
@@ -315,6 +329,8 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 - `references/testing-strategy.md` — TDD-lite, test pyramid, edge cases, test theater
 - `references/ui-consistency-guide.md` — design tokens, component discipline, drift detection
 - `references/frontend-design-guide.md` — aesthetic axes, font sourcing, animation, color, anti-slop blacklist
+- `references/anti-slop.md` — shared cross-skill anti-AI-slop banlist for typography, color, layout, animation, illustration, and copy
+- `references/color-palettes.md` — curated light/dark semantic palettes for frontend design work
 - `references/security-guide.md` — OWASP Top 10, S.E.C.U.R.E. framework, slopsquatting
 - `references/api-contracts-guide.md` — API boundary discipline, shared schema enforcement
 - `references/debugging-root-cause-tracing.md` — trace bugs backward through call stack to source
@@ -328,6 +344,6 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 - `scripts/init-plan-dir.sh` — initialize `.temp/plan-mode/` directory
 - `scripts/plan-status.sh` — show status of all active plans
 - `scripts/resume.sh` — find what to resume after compaction
-- `scripts/plan_utils.py` — read/update plan.json from Codex sessions and helper scripts
+- `scripts/plan_utils.py` — read/update plan.json and finalize completed plans from Codex sessions and helper scripts
 - `scripts/deps-query.py` — query dependency maps for consumers and dependencies
 - `scripts/deps-generate.py` — generate or regenerate dependency maps

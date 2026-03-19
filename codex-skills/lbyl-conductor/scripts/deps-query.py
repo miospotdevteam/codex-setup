@@ -4,6 +4,8 @@
 Usage:
     python3 deps-query.py <project_root> <file_path>
     python3 deps-query.py <project_root> <file_path> --json
+    python3 deps-query.py <file_path> --project-root <project_root>
+    python3 deps-query.py <file_path> --project-root <project_root> --json
 
 Configuration lives in .codex/lbyl-deps.json:
 {
@@ -153,14 +155,55 @@ def format_human(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
-    if len(sys.argv) < 3:
-        print("Usage: deps-query.py <project_root> <file_path> [--json]", file=sys.stderr)
-        sys.exit(1)
+def parse_args(argv: list[str]) -> tuple[str, str, bool]:
+    """Support both positional and --project-root invocation forms."""
+    if len(argv) < 3:
+        raise ValueError(
+            "Usage: deps-query.py <project_root> <file_path> [--json] "
+            "or deps-query.py <file_path> --project-root <project_root> [--json]"
+        )
 
-    project_root = os.path.abspath(sys.argv[1])
-    raw_file_path = sys.argv[2]
-    json_mode = "--json" in sys.argv
+    args = argv[1:]
+    json_mode = False
+    filtered: list[str] = []
+    i = 0
+    while i < len(args):
+        if args[i] == "--json":
+            json_mode = True
+            i += 1
+            continue
+        filtered.append(args[i])
+        i += 1
+
+    if "--project-root" in filtered:
+        idx = filtered.index("--project-root")
+        if idx == 0 or idx == len(filtered) - 1:
+            raise ValueError("Error: --project-root requires both a file path and a project root")
+        if len(filtered) != 3:
+            raise ValueError(
+                "Error: expected exactly one file path plus --project-root <root>"
+            )
+        file_path = filtered[0]
+        project_root = filtered[idx + 1]
+        return os.path.abspath(project_root), file_path, json_mode
+
+    if len(filtered) != 2:
+        raise ValueError(
+            "Usage: deps-query.py <project_root> <file_path> [--json] "
+            "or deps-query.py <file_path> --project-root <project_root> [--json]"
+        )
+
+    project_root = filtered[0]
+    file_path = filtered[1]
+    return os.path.abspath(project_root), file_path, json_mode
+
+
+def main() -> None:
+    try:
+        project_root, raw_file_path, json_mode = parse_args(sys.argv)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
 
     if os.path.isabs(raw_file_path):
         file_path = os.path.relpath(raw_file_path, project_root)
@@ -172,7 +215,12 @@ def main() -> None:
     modules = dep_maps_config.get("modules", [])
 
     if not modules:
-        print(f"Error: No dep_maps.modules configured in {CONFIG_PATH}", file=sys.stderr)
+        config_file = os.path.join(project_root, CONFIG_PATH)
+        print(
+            "Error: No dep_maps.modules configured. "
+            f"Expected dep-map config at {config_file}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     deps_dir_rel = dep_maps_config.get("dir", ".codex/deps")

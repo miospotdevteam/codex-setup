@@ -150,7 +150,11 @@ Default to `false` for simple steps.
 - **Exact skill identifiers** — in each step's `skill` field, use the full
   skill name (e.g., `lbyl-frontend-design`), never vague
   hints. Post-compaction Codex has no memory — only exact names work.
-  Use `"none"` for steps that don't need a specialized skill.
+  Use `"none"` for steps that don't need a specialized skill. This includes
+  the Codex-native `lbyl-*` skills and any exact upstream skill names that
+  are installed from the vendored tree, such as `immersive-frontend`,
+  `react-native-mobile`, `svg-art`, `webapp-testing`, `mcp-builder`,
+  `doc-coauthoring`, and `skill-review-standard`.
 - **Precise descriptions with file paths** — not vague "add validation" but
   specific what-to-do with exact file paths and acceptance criteria. Plans
   describe *what* to build; the executing engineer writes the code.

@@ -50,7 +50,9 @@ This installs the full Codex-native pack plus the upstream skills from:
 into `~/.codex/skills/`, except the upstream `frontend-design` skill. That
 source stays in the repo for sync, but installed Codex sessions use
 `lbyl-frontend-design` as the single standard frontend design skill.
-`immersive-frontend` remains available for motion-heavy frontend work. The
+`immersive-frontend` remains available for motion-heavy frontend work, and the
+upstream-only skills such as `doc-coauthoring`, `mcp-builder`, `svg-art`, and
+`webapp-testing` are installed directly from the vendored upstream tree. The
 `lbyl-*` skills remain the Codex-native defaults for coding work.
 
 If a local Orbit repo is available at `~/Projects/orbit` or `~/projects/orbit`,
@@ -75,6 +77,42 @@ To bootstrap Orbit separately or point at a non-default checkout:
 bash scripts/install-orbit-codex-integration.sh
 ORBIT_DIR=/absolute/path/to/orbit bash scripts/install-orbit-codex-integration.sh
 ```
+
+## Install from GitHub
+
+For multi-machine use, treat GitHub as the source of truth and run the
+bootstrap wrapper on each machine:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/miospotdevteam/codex-setup/main/scripts/bootstrap-codex-skills-from-github.sh | bash
+```
+
+That script:
+
+- clones `https://github.com/miospotdevteam/codex-setup.git` into
+  `~/Projects/codex-setup` if it is missing
+- otherwise validates the checkout and pulls the latest `main`
+- runs `scripts/install-codex-skills.sh` from that checkout
+
+You can also run it from any existing checkout:
+
+```bash
+bash scripts/bootstrap-codex-skills-from-github.sh
+```
+
+Useful overrides:
+
+```bash
+CHECKOUT_DIR=~/projects/codex-setup bash scripts/bootstrap-codex-skills-from-github.sh
+REPO_URL=https://github.com/<org>/codex-setup.git bash scripts/bootstrap-codex-skills-from-github.sh
+BRANCH=main bash scripts/bootstrap-codex-skills-from-github.sh
+SKIP_ORBIT_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
+SKIP_PULL=1 bash scripts/bootstrap-codex-skills-from-github.sh
+```
+
+This still installs into `~/.codex/skills/`, so future updates are not live.
+After pushing changes to GitHub, rerun the bootstrap script on each machine to
+pull and reinstall the latest version.
 
 ## Use in Codex
 
@@ -107,3 +145,6 @@ When the Claude repo evolves:
 
 That adaptation layer is the important part. This repo is intentionally not a
 literal mirror.
+
+Current examples of upstream-only skills that ship directly from the vendored
+tree are `doc-coauthoring`, `mcp-builder`, `svg-art`, and `webapp-testing`.

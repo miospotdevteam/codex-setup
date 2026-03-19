@@ -9,12 +9,22 @@ import/consumer discovery in TypeScript projects.
 ## Quick Start
 
 ```bash
-# Query a file's dependencies and dependents (auto-regens if stale)
+# Preferred: query a file's dependencies and dependents (auto-regens if stale)
 python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <project_root> <file_path>
 
 # Same, JSON output for machine consumption
 python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <project_root> <file_path> --json
+
+# Also supported: pass the file first and the root via --project-root
+python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <file_path> --project-root <project_root>
+
+# Same, JSON output
+python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <file_path> --project-root <project_root> --json
 ```
+
+The positional `<project_root> <file_path>` form remains the canonical one in
+this repo's docs, but the script accepts `--project-root` form as a
+compatibility path for Codex sessions that build the command that way.
 
 The output shows:
 - **DEPENDENCIES**: files this file imports

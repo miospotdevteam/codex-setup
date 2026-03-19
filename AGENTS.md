@@ -28,8 +28,12 @@ Upstream skills also shipped from this repo:
 - `look-before-you-leap/skills/refactoring`
 - `look-before-you-leap/skills/immersive-frontend`
 - `look-before-you-leap/skills/brainstorming`
+- `look-before-you-leap/skills/doc-coauthoring`
+- `look-before-you-leap/skills/mcp-builder`
 - `look-before-you-leap/skills/react-native-mobile`
 - `look-before-you-leap/skills/skill-review-standard`
+- `look-before-you-leap/skills/svg-art`
+- `look-before-you-leap/skills/webapp-testing`
 
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
@@ -43,11 +47,16 @@ Upstream skills also shipped from this repo:
 
 ```bash
 bash scripts/install-codex-skills.sh
+bash scripts/bootstrap-codex-skills-from-github.sh
 ```
 
 This installs the Codex-native `lbyl-*` skills plus the upstream skill set from
 `look-before-you-leap/skills/`, except `frontend-design`, into
 `~/.codex/skills`. The upstream `frontend-design` source stays in the repo for
 sync purposes, but Codex sessions use `lbyl-frontend-design` as the single
-standard frontend design skill. `immersive-frontend` remains installed as the
-separate motion-heavy frontend skill.
+standard frontend design skill. The upstream-only skills such as
+`doc-coauthoring`, `mcp-builder`, `svg-art`, and `webapp-testing` are also
+installed directly from `look-before-you-leap/skills/`. `immersive-frontend`
+remains installed as the separate motion-heavy frontend skill. For
+multi-machine use, prefer `scripts/bootstrap-codex-skills-from-github.sh` so
+each machine clones or pulls the GitHub repo and then runs the local installer.

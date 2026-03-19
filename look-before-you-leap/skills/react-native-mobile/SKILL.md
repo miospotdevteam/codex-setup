@@ -1,6 +1,6 @@
 ---
 name: react-native-mobile
-description: "Build premium React Native mobile apps with native-feeling motion, gestures, haptics, platform conventions, accessibility, and performance discipline. Use for Expo or React Native product work targeting iOS and Android."
+description: "Build premium, native-feeling React Native mobile apps with spring animations, gesture-driven UI, haptic feedback, and platform-specific conventions. Use this skill whenever the user asks for: React Native app, mobile app, Expo app, native feel, gesture animations, haptic feedback, mobile UI, iOS/Android app, cross-platform mobile, Reanimated animations, bottom sheet, swipe gestures, pull-to-refresh, mobile navigation, tab bar, mobile onboarding, mobile performance, FlashList, MMKV storage, offline-first mobile, React Native new architecture, mobile dark mode, Dynamic Type, VoiceOver/TalkBack accessibility, Liquid Glass, or any request for building mobile applications that should feel indistinguishable from native apps. Also use when the user references apps like Things 3, Apollo, Spotify, Discord, Shopify, or Apple's HIG / Material Design 3. Do NOT use for: React web apps (use frontend-design), React Native Web without mobile focus, backend APIs, or admin dashboards — this skill is exclusively for native mobile experiences."
 ---
 
 # React Native Mobile
@@ -38,7 +38,11 @@ decisions and skip the Design Direction assessment in Phase 1.
 
 **After brainstorming:** If `brainstorming` produced a `design.md` with
 visual direction (colors, typography, animation feel): skip the Design
-Direction assessment. Use the approved choices directly.
+Direction assessment. Use the approved choices directly. If the design
+includes a **Creative Brief**, its Visual Direction maps to the App
+Personality questions (animation feel, color temperature, visual
+density), and its Copy Voice section guides all in-app text — from
+onboarding copy to empty states to error messages.
 
 **Full design treatment:** For apps that need serious aesthetic work
 (consumer-facing, brand-driven), invoke `frontend-design` Phase 2 for

@@ -11,6 +11,7 @@ CLI usage:
     python3 plan-utils.py next-step <plan.json>
     python3 plan-utils.py update-step <plan.json> <step_id> <new_status>
     python3 plan-utils.py update-progress <plan.json> <step_id> <progress_index> <new_status>
+    python3 plan-utils.py set-result <plan.json> <step_id> <result_text>
     python3 plan-utils.py add-summary <plan.json> <summary_text>
     python3 plan-utils.py add-deviation <plan.json> <deviation_text>
     python3 plan-utils.py is-fresh <plan.json>
@@ -20,6 +21,7 @@ CLI usage:
 
 import json
 import os
+import signal
 import sys
 
 
@@ -81,12 +83,42 @@ def is_complete(plan):
 
 
 def update_step_status(plan_path, step_id, new_status):
-    """Update a step's status and write back to disk."""
+    """Update a step's status and write back to disk.
+
+    When setting to 'done', warns if progress items are incomplete or
+    result field is empty. These are soft warnings — the guard hook
+    (guard-plan-completion.sh) is the hard gate that blocks mv.
+    """
     plan = read_plan(plan_path)
     step = get_step(plan, step_id)
     if step is None:
         print(f"Error: step {step_id} not found", file=sys.stderr)
         return False
+
+    if new_status == "done":
+        # Warn about incomplete progress items
+        incomplete = [
+            p["task"] for p in step.get("progress", [])
+            if p.get("status") != "done"
+        ]
+        if incomplete:
+            print(
+                f"Warning: step {step_id} marked done but has "
+                f"{len(incomplete)} incomplete progress item(s): "
+                f"{', '.join(incomplete[:3])}"
+                f"{'...' if len(incomplete) > 3 else ''}",
+                file=sys.stderr,
+            )
+
+        # Warn about missing result
+        result = step.get("result")
+        if not result or (isinstance(result, str) and not result.strip()):
+            print(
+                f"Warning: step {step_id} marked done with no result. "
+                f"Fill in the result field describing what was implemented.",
+                file=sys.stderr,
+            )
+
     step["status"] = new_status
     write_plan(plan_path, plan)
     return True
@@ -108,6 +140,18 @@ def update_progress_item(plan_path, step_id, progress_index, new_status):
     return True
 
 
+def set_result(plan_path, step_id, result_text):
+    """Set the result field on a step."""
+    plan = read_plan(plan_path)
+    step = get_step(plan, step_id)
+    if step is None:
+        print(f"Error: step {step_id} not found", file=sys.stderr)
+        return False
+    step["result"] = result_text
+    write_plan(plan_path, plan)
+    return True
+
+
 def add_summary(plan_path, text):
     """Append to the completedSummary array."""
     plan = read_plan(plan_path)
@@ -122,6 +166,18 @@ def add_deviation(plan_path, text):
     plan.setdefault("deviations", []).append(text)
     write_plan(plan_path, plan)
     return True
+
+
+def _is_pid_alive(pid):
+    """Check if a process is alive. Returns False for invalid PIDs."""
+    try:
+        pid = int(pid)
+        if pid <= 0:
+            return False
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
 
 
 def find_active_plan(project_root):
@@ -145,6 +201,79 @@ def find_active_plan(project_root):
                 latest_path = plan_path
 
     return latest_path
+
+
+def find_plan_for_session(project_root, ppid):
+    """Find the plan claimed by a specific session (PPID).
+
+    Scans .session-lock files in active/ subdirectories. Returns the
+    plan.json path where the lock matches ppid, or None.
+    """
+    active_dir = os.path.join(project_root, ".temp", "plan-mode", "active")
+    if not os.path.isdir(active_dir):
+        return None
+
+    ppid_str = str(ppid)
+
+    for entry in os.listdir(active_dir):
+        plan_dir = os.path.join(active_dir, entry)
+        if not os.path.isdir(plan_dir):
+            continue
+        lock_file = os.path.join(plan_dir, ".session-lock")
+        plan_path = os.path.join(plan_dir, "plan.json")
+        if os.path.isfile(lock_file) and os.path.isfile(plan_path):
+            try:
+                with open(lock_file) as f:
+                    lock_pid = f.read().strip()
+                if lock_pid == ppid_str:
+                    return plan_path
+            except OSError:
+                continue
+
+    return None
+
+
+def find_unclaimed_plans(project_root):
+    """Find active plans with dead or missing .session-lock PIDs.
+
+    Returns list of (plan_name, plan_json_path) sorted by mtime desc.
+    """
+    active_dir = os.path.join(project_root, ".temp", "plan-mode", "active")
+    if not os.path.isdir(active_dir):
+        return []
+
+    unclaimed = []
+
+    for entry in os.listdir(active_dir):
+        plan_dir = os.path.join(active_dir, entry)
+        if not os.path.isdir(plan_dir):
+            continue
+        plan_path = os.path.join(plan_dir, "plan.json")
+        if not os.path.isfile(plan_path):
+            continue
+
+        lock_file = os.path.join(plan_dir, ".session-lock")
+        if not os.path.isfile(lock_file):
+            # No lock at all — unclaimed
+            mtime = os.path.getmtime(plan_path)
+            unclaimed.append((entry, plan_path, mtime))
+            continue
+
+        try:
+            with open(lock_file) as f:
+                lock_pid = f.read().strip()
+        except OSError:
+            mtime = os.path.getmtime(plan_path)
+            unclaimed.append((entry, plan_path, mtime))
+            continue
+
+        if not lock_pid or not _is_pid_alive(lock_pid):
+            mtime = os.path.getmtime(plan_path)
+            unclaimed.append((entry, plan_path, mtime))
+
+    # Sort by mtime descending (most recent first)
+    unclaimed.sort(key=lambda x: x[2], reverse=True)
+    return [(name, path) for name, path, _ in unclaimed]
 
 
 def format_status(plan):
@@ -207,6 +336,29 @@ def main():
             print("")
         return
 
+    if command == "find-for-session":
+        if len(sys.argv) < 4:
+            print("Usage: plan-utils.py find-for-session <project_root> <ppid>", file=sys.stderr)
+            sys.exit(1)
+        project_root = sys.argv[2]
+        ppid = sys.argv[3]
+        result = find_plan_for_session(project_root, ppid)
+        if result:
+            print(result)
+        else:
+            print("")
+        return
+
+    if command == "find-unclaimed":
+        project_root = sys.argv[2]
+        result = find_unclaimed_plans(project_root)
+        if result:
+            for name, path in result:
+                print(f"{name}\t{path}")
+        else:
+            print("")
+        return
+
     plan_path = sys.argv[2]
 
     if command == "status":
@@ -232,6 +384,15 @@ def main():
         progress_index = int(sys.argv[4])
         new_status = sys.argv[5]
         if not update_progress_item(plan_path, step_id, progress_index, new_status):
+            sys.exit(1)
+
+    elif command == "set-result":
+        if len(sys.argv) < 5:
+            print("Usage: plan-utils.py set-result <plan.json> <step_id> <result_text>", file=sys.stderr)
+            sys.exit(1)
+        step_id = int(sys.argv[3])
+        result_text = sys.argv[4]
+        if not set_result(plan_path, step_id, result_text):
             sys.exit(1)
 
     elif command == "add-summary":

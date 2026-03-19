@@ -1,6 +1,6 @@
 ---
 name: immersive-frontend
-description: "Build immersive, motion-first web experiences with WebGL, Three.js, R3F, GSAP ScrollTrigger, shaders, and scroll-driven 3D choreography. Use for cinematic, canvas-heavy frontend work beyond standard UI layouts."
+description: "Build award-winning immersive web experiences with WebGL, Three.js, R3F, GSAP ScrollTrigger, custom GLSL shaders, and scroll-driven 3D choreography. Make sure to use this skill whenever the user asks for: immersive websites, WebGL experiences, 3D web, creative dev, scroll-driven animations, cinematic scroll, Three.js scenes, GSAP + Three.js, motion-driven sites, award-winning website design, Awwwards-quality sites, full-canvas experiences, particle systems, shader effects, smooth scroll with WebGL, preloader animations, image distortion effects, parallax depth, magnetic cursors, text reveal animations, infinite marquees, camera flythrough, noise displacement, fresnel glow, chromatic aberration, post-processing bloom, film grain, or any request that goes beyond standard UI into experiential, motion-first, canvas-driven territory. Also trigger when the user references studios like Active Theory, Lusion, Immersive Garden, or sites from Awwwards/Codrops, or uses words like 'cinematic', 'theatrical', or 'dark theme with neon'. Do NOT use for: standard UI components, form-heavy pages, admin dashboards, simple CSS hover states, or basic Framer Motion page transitions — use frontend-design instead."
 ---
 
 # Immersive Frontend
@@ -44,7 +44,11 @@ UI chrome, and overall mood. If the handoff specifies a hybrid scope,
 follow the Hybrid Projects pattern above. Skip to the Decision Tree below.
 
 **If `brainstorming` ran first** and produced visual direction in `design.md`:
-use those decisions. Skip to the Decision Tree below.
+use those decisions. Skip to the Decision Tree below. If the design
+includes a **Creative Brief**, its Intent and Visual Direction directly
+inform scene mood, color choices, and motion personality — replacing
+the need to invoke `frontend-design` Phase 2 for aesthetic direction.
+The Copy Voice section guides any DOM text overlays or UI chrome copy.
 
 **If neither ran**: invoke `frontend-design` Phase 2 (Greenfield — Decision
 Matrix) to establish the aesthetic direction. The 6-axis scores, creative
@@ -331,6 +335,9 @@ See `references/architecture.md` § Accessibility Implementation Patterns
 for complete patterns.
 
 ### Anti-Patterns — What NOT to Do
+
+Also read `references/anti-slop.md` for the shared cross-skill banlist
+covering typography, color, layout, animation, illustration, and copy.
 
 | Anti-Pattern | Why It Fails | Do This Instead |
 |---|---|---|

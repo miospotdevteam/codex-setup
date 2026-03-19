@@ -142,6 +142,10 @@ python3 "$PLAN_UTILS" update-step "$PLAN_JSON" 3 done
 # Add to completed summary
 python3 "$PLAN_UTILS" add-summary "$PLAN_JSON" "Step 3: Migrated all routes"
 
+# Finalize a fully done plan: mark top-level status completed and move
+# .temp/plan-mode/active/<plan-name>/ -> .temp/plan-mode/completed/<plan-name>/
+python3 "$PLAN_UTILS" complete-plan "$PLAN_JSON"
+
 # Get status overview
 python3 "$PLAN_UTILS" status "$PLAN_JSON"
 
@@ -259,8 +263,9 @@ This is a loop. Follow it mechanically.
 │     d. Add to completedSummary                          │
 │                                                         │
 │  6. IF all steps are now done:                          │
-│     a. Move plan folder from active/ to completed/      │
-│     b. Report completion to the user                    │
+│     a. Run plan_utils.py complete-plan                  │
+│     b. Confirm plan moved from active/ to completed/    │
+│     c. Report completion to the user                    │
 │                                                         │
 │  7. ELSE: Loop back to step 1                           │
 │                                                         │
@@ -277,9 +282,28 @@ any step `done`:
 3. You've written meaningful notes in the result field
 
 **A plan with all steps `done` but unverified work is a lie on disk.** Do
-not move an incomplete plan to `completed/`. More importantly, don't mark steps done until they ARE
-done. If you're unsure, leave it `in_progress` with notes about what
-remains.
+not move an incomplete plan to `completed/`. More importantly, don't mark
+steps done until they ARE done. If you're unsure, leave it `in_progress`
+with notes about what remains.
+
+### Finalization command is mandatory
+
+When final verification is done and every step is `done`, do **not** stop at
+"task complete" in your head. Run the exact completion command:
+
+```bash
+PLAN_UTILS="$HOME/.codex/skills/lbyl-conductor/scripts/plan_utils.py"
+PLAN_JSON=".temp/plan-mode/active/<plan-name>/plan.json"
+python3 "$PLAN_UTILS" complete-plan "$PLAN_JSON"
+```
+
+That command is the Codex-native completion handshake. It does three things in
+one place:
+1. Refuses to finalize plans with unfinished or blocked steps
+2. Sets the top-level plan status to `completed`
+3. Moves the plan folder from `active/` to `completed/`
+
+If you skip this command, the task is not actually closed out.
 
 ### Progress updates are NOT optional
 
@@ -375,8 +399,8 @@ before compaction.
 
 - **Checkpoint constantly** — follow the Checkpoint Rule (Phase 2)
 - **Update immediately** — after every step completion, write to disk
-- **Never delete a plan** — when all steps are complete, move the plan
-  folder from `active/` to `completed/`
+- **Never delete a plan** — when all steps are complete, finalize it via
+  `plan_utils.py complete-plan` so it moves from `active/` to `completed/`
 - **If requirements change** — update plan.json FIRST, then continue
   execution
 - **The discovery section is sacred** — write it thoroughly during
@@ -389,6 +413,7 @@ before compaction.
 ```bash
 bash .temp/plan-mode/scripts/plan-status.sh    # see all plan states
 bash .temp/plan-mode/scripts/resume.sh         # find what to resume
+python3 .temp/plan-mode/scripts/plan_utils.py complete-plan .temp/plan-mode/active/<plan-name>/plan.json
 ```
 
 ---
@@ -419,7 +444,7 @@ engineering-discipline ensures the work is done correctly.
 | User says "continue" | Read plan.json -> find next step -> execute |
 | Requirements changed | Update plan.json -> continue execution |
 | Stuck or blocked | update-step blocked -> ask user |
-| All steps complete | Final verification -> move plan to completed/ -> report to user |
+| All steps complete | Final verification -> `plan_utils.py complete-plan` -> report to user |
 
 ---
 
