@@ -5,6 +5,13 @@
 - Skill(s):
 - Model: unknown
 - Codex setup repo: /Users/robertobortolaso/Projects/codex-setup
+- Resolved: yes
+
+## Resolved note
+
+Resolved in this repo by adding `set-result` support to
+`codex-skills/lbyl-conductor/scripts/plan_utils.py` and refreshing the
+generated `.temp/plan-mode/scripts/plan_utils.py` copy from source.
 
 ## What happened
 

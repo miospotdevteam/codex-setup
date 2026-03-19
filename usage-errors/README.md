@@ -3,6 +3,13 @@
 Use this directory to capture failures caused by the LBYL skill pack itself
 when those failures show up in other sessions or repos.
 
+## Directory layout
+
+- Keep open incidents at the top level of `usage-errors/`.
+- Move fixed incidents into `usage-errors/resolved/`.
+- Do not delete resolved incidents unless you are explicitly pruning repo
+  history; they are part of the feedback trail.
+
 One file per incident. Prefer the helper script:
 
 ```bash
@@ -58,5 +65,7 @@ Every report should be concrete and short. Keep these sections:
 2. Create the report with the helper.
 3. Fill in the sections with repo-specific evidence and the smallest plausible
    fix to the skill/docs/process.
-4. Mention in the final closeout that the usage error was logged here, or say
+4. Once the underlying issue is fixed, move the report into `resolved/` and
+   add a short note about what resolved it.
+5. Mention in the final closeout that the usage error was logged here, or say
    explicitly if you could not log it because this repo was unavailable.
