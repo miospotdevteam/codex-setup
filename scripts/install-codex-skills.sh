@@ -10,6 +10,7 @@ SRC_DIRS=(
 DST_DIR="$HOME/.codex/skills"
 MAX_DESCRIPTION_LENGTH=1024
 ORBIT_INSTALLER="$ROOT_DIR/scripts/install-orbit-codex-integration.sh"
+CLAUDE_BRIDGE_INSTALLER="$ROOT_DIR/scripts/install-claude-bridge-codex-integration.sh"
 
 find_orbit_dir() {
   if [ -n "${ORBIT_DIR:-}" ] && [ -d "$ORBIT_DIR" ]; then
@@ -115,6 +116,12 @@ else
   else
     echo "Skipped Orbit integration (Orbit repo not found; set ORBIT_DIR=/absolute/path/to/orbit to enable it)"
   fi
+fi
+
+if [ "${SKIP_CLAUDE_BRIDGE_INSTALL:-0}" = "1" ]; then
+  echo "Skipped claude-bridge integration (SKIP_CLAUDE_BRIDGE_INSTALL=1)"
+else
+  bash "$CLAUDE_BRIDGE_INSTALLER"
 fi
 
 echo "Done. Repo skills installed to $DST_DIR"

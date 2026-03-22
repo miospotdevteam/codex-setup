@@ -32,9 +32,6 @@ Every plan consists of two files:
 Hooks read `plan.json`. You update `plan.json`. The user reviews
 `masterPlan.md` once during planning. After approval, only plan.json
 changes — masterPlan.md is a stable record of what was agreed upon.
-That means execution should keep moving after approval. Non-material
-follow-through belongs in plan.json; only material scope or tradeoff
-changes warrant another Orbit review.
 
 ---
 
@@ -85,10 +82,15 @@ This skill must NOT:
 - **Move a plan to `completed/` with non-done items** — a hook enforces
   this, but the rule is the skill's, not just the hook's.
 
-**Autonomy limits**: creating plans, writing to plan files, updating
-progress, and adding non-material post-approval follow-through to plan.json
-are autonomous. Deleting plans, skipping blocked steps, and materially
-deviating from the approved plan require user confirmation.
+**Autonomy limits**: creating plans, writing to plan files, and updating
+progress are autonomous. Deleting plans, skipping blocked steps, and
+deviating from the plan require user confirmation.
+
+Reinterpreting or narrowing an accepted step after verification has failed
+also counts as a deviation. If Codex says a criterion was not met, you may
+not redefine terms like "panel", "sync", or "complete" on your own. Ask
+the user to approve the narrower scope and record it in `plan.json.deviations`
+before proceeding.
 
 **Prerequisites**: this skill is always invoked via the `look-before-you-leap`
 conductor. `${CLAUDE_PLUGIN_ROOT}` must resolve for reference file paths. All
@@ -190,10 +192,10 @@ modify BEFORE writing the plan. This tells you:
 
 ```bash
 # Query blast radius for a file
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py . <file_path>
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py . "<file_path>"
 
 # JSON output for programmatic use
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py . <file_path> --json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py . "<file_path>" --json
 ```
 
 Feed the dep-map output directly into your plan: use the DEPENDENTS list
@@ -232,6 +234,7 @@ structure exactly. Hooks parse this schema — deviations break tooling.
       "status": "pending",
       "skill": "none",
       "simplify": false,
+      "codexVerify": true,
       "files": ["src/foo.ts", "src/bar.ts"],
       "description": "What needs to happen. Self-contained for a fresh context.",
       "acceptanceCriteria": "Concrete conditions (e.g., 'tsc --noEmit passes').",
@@ -370,6 +373,10 @@ This is a loop. Follow it mechanically.
 │  1. Read plan.json from disk                            │
 │  2. Find the next pending or in_progress step           │
 │  3. Mark it in_progress — write to disk NOW             │
+│  3b. EXTRACT DELIVERABLES CHECKLIST:                    │
+│      - Re-read step description + acceptanceCriteria    │
+│      - List every deliverable as a numbered checklist   │
+│      - This checklist gates "mark done" (see below)     │
 │                                                         │
 │  4. IF step has a subPlan:                              │
 │     a. Find next pending group                          │
@@ -377,17 +384,27 @@ This is a loop. Follow it mechanically.
 │     c. Mark group done in plan.json                     │
 │     d. Checkpoint: update progress items                │
 │     e. IF all groups complete:                          │
-│        - Mark step done                                 │
+│        - Verify deliverables checklist (every item)     │
+│        - Run own verification (tsc, lint, tests)        │
+│        - IF codexVerify: true → Codex gate (see below)  │
+│        - Mark step done (with Codex verdict in result)  │
 │        - Add to completedSummary                        │
-│        - Run verification                               │
 │                                                         │
 │  5. IF step has no subPlan:                             │
 │     a. Execute the step                                 │
 │     b. CHECKPOINT after every 2-3 file edits:           │
 │        - Update progress items via plan_utils.py        │
 │        - Write partial notes to result field            │
-│     c. When done: mark step done                        │
-│     d. Add to completedSummary                          │
+│     c. Verify deliverables checklist (every item)       │
+│     d. Run own verification (tsc, lint, tests)          │
+│     e. IF codexVerify: true → Codex gate (see below)    │
+│     f. Mark step done (with Codex verdict in result)    │
+│     g. Add to completedSummary                          │
+│                                                         │
+│  CODEX GATE (for steps with codexVerify: true):         │
+│     a. Call mcp__codex__codex with step context          │
+│     b. If issues found: fix → codex-reply → repeat      │
+│     c. Only proceed to "mark done" after Codex PASS     │
 │                                                         │
 │  6. IF all steps are now done:                          │
 │     a. Move plan folder from active/ to completed/      │
@@ -405,13 +422,21 @@ any step `done`:
 
 1. The code you wrote actually works (you verified it, not just assumed)
 2. The step's acceptance criteria are met
-3. You've written meaningful notes in the result field
+3. Every item on the deliverables checklist (extracted in step 3b of the
+   loop) has been verified — if any deliverable is missing, implement it
+   before marking done
+4. If `codexVerify: true`: Codex MCP has reported PASS (not just your
+   own verification — Codex is an independent gate)
+5. You've written meaningful notes in the result field, including the
+   Codex verdict (e.g., "Codex: PASS") for codexVerify steps
 
 **A plan with all steps `done` but unverified work is a lie on disk.** A
 hook guards the `mv` command — you cannot move an incomplete plan to
-`completed/`. But more importantly, don't mark steps done until they ARE
-done. If you're unsure, leave it `in_progress` with notes about what
-remains.
+`completed/`. The `verify-step-completion` hook also enforces the Codex
+gate: if a codexVerify step is marked done without a Codex verdict in
+the result field, it reverts to `in_progress`. Don't mark steps done
+until they ARE done. If you're unsure, leave it `in_progress` with
+notes about what remains.
 
 ### Progress updates are NOT optional
 
@@ -551,8 +576,7 @@ engineering-discipline ensures the work is done correctly.
 | Step touches >10 files or is a sweep | Use inline subPlan with groups |
 | After any compaction | Read plan.json IMMEDIATELY -> state where you are -> continue |
 | User says "continue" | Read plan.json -> find next step -> execute |
-| Requirements changed, non-material and in service of approved goal | Update plan.json -> continue execution |
-| Requirements changed, material or risky | Update plan.json -> ask user -> fresh review if needed |
+| Requirements changed | Update plan.json -> continue execution |
 | Stuck or blocked | update-step blocked -> ask user |
 | All steps complete | Final verification -> move plan to completed/ -> report to user |
 

@@ -217,6 +217,11 @@ If any verification step fails, fix the failures before declaring done.
 This step is not optional. It is not something you do when asked. It is
 something you do EVERY TIME, automatically, as the final step of every task.
 
+If the active plan step has `claudeVerify: true`, local verification is not
+enough on its own. After your normal typecheck/lint/test/build passes, run the
+`claude-bridge` verification step and do not mark the step `done` until
+Claude returns `PASS`.
+
 ### Self-audit after corrections
 
 When the user points out a mistake, do not just fix that one instance.

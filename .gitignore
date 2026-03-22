@@ -3,3 +3,8 @@
 skill-review-standard-workspace/
 look-before-you-leap-workspace
 refactoring-workspace
+claude-bridge-vscode/node_modules/
+claude-bridge-vscode/out/
+claude-bridge-vscode/*.vsix
+__pycache__/
+*.pyc

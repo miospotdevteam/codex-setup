@@ -1,40 +1,29 @@
 #!/usr/bin/env bash
 # PostToolUse hook: Verify step completion before proceeding to next step.
 #
-# After every Edit/Write to a masterPlan.md, compares step statuses with
-# a cached snapshot. When a step transitions to [x]:
-# 1. Creates .verify-pending-N marker
-# 2. Injects directive to dispatch a verification sub-agent
+# After Edit/Write to plan.json/masterPlan.md, or after Bash calls that
+# update plan.json via plan_utils.py, compares step statuses with a cached
+# snapshot. When a step transitions to done/[x]:
+# 1. For codexVerify steps: checks if result field contains a Codex verdict
+#    (pattern: "Codex: PASS" or "Codex: FAIL"). If missing, reverts the
+#    step to in_progress and blocks with instructions to run Codex first.
+# 2. For steps that pass the Codex gate (or don't have codexVerify):
+#    creates .verify-pending-N marker and injects directive to dispatch
+#    a verification sub-agent.
 #
 # The verification agent checks acceptance criteria, file changes, and
-# Progress completeness before removing the marker.
+# progress completeness before removing the marker.
 #
 # Marker: <plan-dir>/.verify-pending-N (N = step number)
 # Cache: <plan-dir>/.step-status-cache (N:status per line)
 #
-# Input: JSON on stdin with tool_name, tool_input.file_path, cwd
+# Input: JSON on stdin with tool_name, tool_input, cwd
 
 set -euo pipefail
 
 INPUT=$(cat)
 
-# Extract file path
-FILE_PATH=$(python3 -c "
-import json, sys
-data = json.loads(sys.stdin.read())
-print(data.get('tool_input', {}).get('file_path', ''))
-" <<< "$INPUT" 2>/dev/null) || true
-
-# Act on plan.json OR masterPlan.md in active plans
-if [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/plan.json" ]]; then
-  PLAN_DIR="$(dirname "$FILE_PATH")"
-elif [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/masterPlan.md" ]]; then
-  PLAN_DIR="$(dirname "$FILE_PATH")"
-else
-  exit 0
-fi
-
-# Find project root
+# Find project root first (needed for Bash path)
 source "${BASH_SOURCE[0]%/*}/lib/find-root.sh"
 
 CWD=$(python3 -c "
@@ -44,6 +33,81 @@ print(data.get('cwd', ''))
 " <<< "$INPUT" 2>/dev/null) || true
 
 PROJECT_ROOT="$(find_project_root "${CWD:-$PWD}")"
+
+# Determine PLAN_DIR based on tool type
+TOOL_NAME=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+print(data.get('tool_name', ''))
+" <<< "$INPUT" 2>/dev/null) || true
+
+PLAN_DIR=""
+
+if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+  # Edit/Write: extract file_path and check if it's a plan file
+  FILE_PATH=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+print(data.get('tool_input', {}).get('file_path', ''))
+" <<< "$INPUT" 2>/dev/null) || true
+
+  if [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/plan.json" ]]; then
+    PLAN_DIR="$(dirname "$FILE_PATH")"
+  elif [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/masterPlan.md" ]]; then
+    PLAN_DIR="$(dirname "$FILE_PATH")"
+  fi
+
+elif [[ "$TOOL_NAME" == "Bash" ]]; then
+  # Bash: check if command is a plan_utils call that marks a step done.
+  # Extract the specific plan.json path from the command to handle multiple
+  # active plans correctly (not just the first one found on disk).
+  COMMAND=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+print(data.get('tool_input', {}).get('command', ''))
+" <<< "$INPUT" 2>/dev/null) || true
+
+  export HOOK_COMMAND="$COMMAND"
+  export HOOK_PROJECT_ROOT="$PROJECT_ROOT"
+
+  PLAN_DIR=$(python3 << 'PYEOF'
+import re, os, sys
+
+command = os.environ.get("HOOK_COMMAND", "")
+project_root = os.environ.get("HOOK_PROJECT_ROOT", "")
+
+# Must contain plan_utils
+if "plan_utils" not in command:
+    sys.exit(0)
+
+# Must contain update-step with "done" as the status argument (not a substring)
+if not re.search(r"update-step\s+\S+\s+\d+\s+done(?:\s|$|&|;)", command):
+    sys.exit(0)
+
+# Extract plan.json path from PLAN_JSON="..." variable assignment in the command
+m = re.search(r'PLAN_JSON="(.*?\.temp/plan-mode/active/[^/]+/plan\.json)"', command)
+if m:
+    print(os.path.dirname(m.group(1)))
+    sys.exit(0)
+
+# Fallback: scan active plans directory (for commands where PLAN_JSON was set
+# in a previous Bash call and only referenced as $PLAN_JSON here)
+active_dir = os.path.join(project_root, ".temp", "plan-mode", "active")
+if os.path.isdir(active_dir):
+    for name in sorted(os.listdir(active_dir)):
+        pj = os.path.join(active_dir, name, "plan.json")
+        if os.path.isfile(pj):
+            print(os.path.join(active_dir, name))
+            break
+PYEOF
+  ) || true
+fi
+
+# No relevant plan file found — exit silently
+if [[ -z "$PLAN_DIR" ]]; then
+  exit 0
+fi
+
 CACHE_FILE="$PLAN_DIR/.step-status-cache"
 
 PLUGIN_ROOT="$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)"
@@ -161,17 +225,81 @@ export HOOK_PLAN_PATH="$plan_path"
 export HOOK_PLAN_NAME="$plan_name"
 
 python3 << 'PYEOF'
-import json, os, sys
+import json, os, re, sys
 
 steps = os.environ["HOOK_NEWLY_COMPLETED"]
 plan_path = os.environ["HOOK_PLAN_PATH"]
 plan_name = os.environ["HOOK_PLAN_NAME"]
 plan_dir = os.environ["HOOK_PLAN_DIR"]
+plan_json_path = os.environ["HOOK_PLAN_JSON"]
+plan_utils_path = os.environ["HOOK_PLAN_UTILS"]
 
 step_list = steps.split()
 step_display = ", ".join(f"Step {s}" for s in step_list)
 markers = ", ".join(f".verify-pending-{s}" for s in step_list)
 
+# Check codexVerify steps and enforce Codex-before-done gate
+codex_blocked_steps = []
+plan = None
+if os.path.isfile(plan_json_path):
+    try:
+        sys.path.insert(0, os.path.dirname(plan_utils_path))
+        import plan_utils
+        plan = plan_utils.read_plan(plan_json_path)
+        for step in plan.get("steps", []):
+            sid = str(step["id"])
+            if sid not in step_list:
+                continue
+            if not step.get("codexVerify", False):
+                continue
+            # Check if result field contains a Codex verdict
+            result = step.get("result") or ""
+            if not re.search(r"Codex:\s*(PASS|FAIL)", result, re.IGNORECASE):
+                codex_blocked_steps.append(sid)
+    except Exception:
+        pass
+
+# If any codexVerify steps lack a Codex verdict, revert them and block
+if codex_blocked_steps:
+    # Revert blocked steps to in_progress and remove their markers
+    for sid in codex_blocked_steps:
+        try:
+            plan_utils.update_step(plan_json_path, int(sid), "in_progress")
+        except Exception:
+            pass
+        marker_path = os.path.join(plan_dir, f".verify-pending-{sid}")
+        if os.path.exists(marker_path):
+            os.remove(marker_path)
+
+    blocked_display = ", ".join(f"Step {s}" for s in codex_blocked_steps)
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": (
+                f"CODEX VERIFICATION REQUIRED BEFORE MARKING DONE — "
+                f"{blocked_display} {'has' if len(codex_blocked_steps) == 1 else 'have'} "
+                "`codexVerify: true` but no Codex verdict in the result field.\n\n"
+                f"{'This step has' if len(codex_blocked_steps) == 1 else 'These steps have'} "
+                "been reverted to `in_progress`.\n\n"
+                "You must run Codex MCP verification and get a PASS verdict "
+                "BEFORE marking the step done. Follow the conductor skill's "
+                "'Codex verification (gate before marking done)' flow:\n\n"
+                "1. Read `references/codex-verify-template.md` for the prompt template\n"
+                "2. Call `mcp__codex__codex` with the step's context\n"
+                "3. Fix any findings, then call `mcp__codex__codex-reply` to re-verify\n"
+                "4. Repeat until Codex reports PASS\n"
+                "5. Set the result field to include 'Codex: PASS' (or the verdict)\n"
+                "6. Then mark the step done again\n\n"
+                "If `mcp__codex__codex` is not available, note 'Codex: skipped — "
+                "MCP not configured' in the result field."
+            )
+        }
+    }
+    json.dump(output, sys.stdout)
+    sys.exit(0)
+
+# All codexVerify gates passed (or no codexVerify steps) — proceed with
+# generic verification sub-agent flow
 output = {
     "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
@@ -188,8 +316,10 @@ output = {
             "implemented correctly and FULLY. Do the following checks:\n\n"
             "1. Read the step from plan.json — note its acceptanceCriteria, "
             "files array, and progress items.\n"
-            "2. Check `git diff --name-only` to confirm every file listed in "
-            "the step's `files` array was actually modified.\n"
+            "2. Check `git diff --name-only` for modified tracked files AND "
+            "`git status --short` for untracked new files. Every file in "
+            "the step's `files` array should appear in one of these — "
+            "either as a modified tracked file or as a new untracked file.\n"
             "3. Check that ALL progress items in the step have status 'done' — "
             "none should be 'pending' or 'in_progress'.\n"
             "4. If the acceptance criteria include a test or verification "

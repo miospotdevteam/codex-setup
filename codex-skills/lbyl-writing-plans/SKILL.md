@@ -79,6 +79,8 @@ reads and updates during execution. Include:
 - Steps with TDD-granularity progress items
 - Inline sub-plans for large steps (see Step 4 below)
 - Exact skill identifiers in `skill` fields
+- Explicit `executor` routing on every step
+- `claudeVerify: true` on every step unless the user explicitly opts out
 
 #### masterPlan.md — user-facing proposal (write-once)
 
@@ -162,6 +164,9 @@ Default to `false` for simple steps.
   are installed from the vendored tree, such as `immersive-frontend`,
   `react-native-mobile`, `svg-art`, `webapp-testing`, `mcp-builder`,
   `doc-coauthoring`, and `skill-review-standard`.
+- **Separate skill from executor** — `skill` is the guidance Codex follows;
+  `executor` is who should implement the step. Set `executor` explicitly on
+  every step.
 - **Precise descriptions with file paths** — not vague "add validation" but
   specific what-to-do with exact file paths and acceptance criteria. Plans
   describe *what* to build; the executing engineer writes the code.
@@ -172,6 +177,25 @@ Default to `false` for simple steps.
   engineer reads. If it's not in the plan, it doesn't exist for them
 - **DRY / YAGNI** — cut anything not clearly needed right now
 - **Frequent commits** — after every green test or logical unit of work
+
+#### Execution-agent routing
+
+When assigning `executor`, use this rule set:
+
+- Set `executor: "claude"` when the step materially changes visual
+  presentation: layout, styling, spacing, typography, color, motion,
+  responsive presentation, or theme/design-token work that changes rendered
+  output.
+- Set `executor: "codex"` for copy-only UI changes, non-visual UI behavior
+  changes, backend work, refactors, tests, infra, and general coding.
+- Theme/token changes still route to Claude because they change rendered
+  presentation across consumers.
+
+Do not route a step to Claude just because it touches frontend files. If the
+change is copy-only or behavior-only, keep it on Codex.
+
+Every step should also carry `claudeVerify: true` in this repo's default
+workflow. Claude verification is a hard gate before `done`.
 
 ### 4. Evaluate sub-plan needs (mandatory checkpoint)
 

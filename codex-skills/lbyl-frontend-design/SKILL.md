@@ -48,6 +48,16 @@ handles implementation.
 **Design already decided:** If the user's request is purely "build this
 mockup/design" (design already decided): skip Phase 2, proceed to Phase 3.
 
+**Claude-routed implementation:** In this repo's workflow, materially visual
+steps should usually have `executor: "claude"` in `plan.json`. Codex still
+uses this skill to shape the design packet and evaluate the result, but the
+implementation call itself should go through `claude-bridge`
+`frontend_implement`. Send discovery/design context, the exact step scope,
+and explicit instructions to prefer shared components and flag deviations.
+After Claude edits the working tree, Codex reviews the diff, can send a
+follow-up round on the same `bridgeSessionId`, and then runs the hard Claude
+verification gate.
+
 ---
 
 ## Phase 1: Context Scan

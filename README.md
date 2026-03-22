@@ -65,10 +65,29 @@ the installer also:
 That makes Orbit tools available automatically in future Codex sessions at
 startup via `~/.codex/config.toml`.
 
+The installer also configures `claude-bridge` globally for Codex:
+
+- registers a global Codex MCP server named `claude-bridge`
+- builds and installs the `claude-bridge` VS Code extension
+- enables live Claude brainstorming in VS Code plus headless Claude frontend
+  implementation and verification flows inside Codex sessions
+
+This path assumes:
+
+- `claude` CLI is installed and authenticated
+- `code` CLI is available
+- `npm`, `node`, and `python3` are available locally
+
 To skip Orbit during a skill install:
 
 ```bash
 SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To skip the Claude bridge during a skill install:
+
+```bash
+SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/install-codex-skills.sh
 ```
 
 To bootstrap Orbit separately or point at a non-default checkout:
@@ -76,6 +95,12 @@ To bootstrap Orbit separately or point at a non-default checkout:
 ```bash
 bash scripts/install-orbit-codex-integration.sh
 ORBIT_DIR=/absolute/path/to/orbit bash scripts/install-orbit-codex-integration.sh
+```
+
+To install or refresh Claude bridge separately:
+
+```bash
+bash scripts/install-claude-bridge-codex-integration.sh
 ```
 
 ## Install from GitHub
@@ -107,6 +132,7 @@ CHECKOUT_DIR=~/projects/codex-setup bash scripts/bootstrap-codex-skills-from-git
 REPO_URL=https://github.com/<org>/codex-setup.git bash scripts/bootstrap-codex-skills-from-github.sh
 BRANCH=main bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_ORBIT_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
+SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_PULL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 ```
 
@@ -134,6 +160,30 @@ For coding work, the expected default is:
 By default, the Codex skill pack presents new plans through Orbit for review
 with `orbit_await_review` before execution starts unless the user explicitly
 skips that review.
+
+## Asymmetric Claude Workflow
+
+This repo now assumes an intentionally asymmetric split:
+
+- Codex is the orchestrator and default implementer.
+- Claude handles live brainstorming through `claude-bridge`.
+- Claude handles materially visual frontend implementation through the
+  headless `frontend_implement` tool.
+- Claude is a hard verification gate before steps are marked `done`.
+
+Plan steps should carry explicit routing metadata:
+
+- `executor: "claude"` for materially visual presentation changes
+- `executor: "codex"` for copy-only UI changes, behavior-only UI changes, and
+  all non-visual work
+- `claudeVerify: true` by default on every step
+
+Brainstorming uses a live Claude session surfaced in VS Code and exposed back
+to Codex through `brainstorm_start` and `brainstorm_status`.
+
+Non-PASS verification rounds write JSON findings to
+[`usage-errors/claude-findings`](/Users/robertobortolaso/Projects/codex-setup/usage-errors/claude-findings).
+PASS does not create a findings file.
 
 If a future session discovers that the skill pack itself caused a bad
 workflow, missed requirement, or other usage error, log it back here under

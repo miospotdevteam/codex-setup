@@ -36,6 +36,8 @@ document — it does NOT contain execution state.
       "title": "Step title",
       "status": "pending",
       "skill": "none",
+      "executor": "codex",
+      "claudeVerify": true,
       "simplify": false,
       "files": ["src/foo.ts", "src/bar.ts"],
       "description": "What needs to happen. Specific enough for a fresh context window.",
@@ -52,6 +54,8 @@ document — it does NOT contain execution state.
       "title": "Large sweep step",
       "status": "pending",
       "skill": "none",
+      "executor": "claude",
+      "claudeVerify": true,
       "simplify": false,
       "files": ["a.tsx", "b.tsx", "c.tsx", "d.tsx"],
       "description": "A step large enough to warrant a sub-plan.",
@@ -101,6 +105,8 @@ document — it does NOT contain execution state.
 | `title` | string | yes | Step title |
 | `status` | string | yes | One of: `pending`, `in_progress`, `done`, `blocked` |
 | `skill` | string | yes | Skill to invoke, or `"none"` |
+| `executor` | string | yes | Who implements the step: `codex` or `claude` |
+| `claudeVerify` | boolean | yes | Whether Claude verification is a hard pre-`done` gate |
 | `simplify` | boolean | yes | Whether to run simplification after step |
 | `files` | string[] | yes | Files involved in this step |
 | `description` | string | yes | What to do — self-contained for fresh context |
@@ -142,6 +148,37 @@ Steps, progress items, and groups all use the same status values:
 | `in_progress` | Currently being worked on |
 | `done` | Complete and verified |
 | `blocked` | Cannot proceed (steps only) |
+
+## Claude Routing Rules
+
+`skill` and `executor` are separate on purpose:
+
+- `skill` says which guidance Codex should follow.
+- `executor` says who should implement the step.
+
+Use `executor: "claude"` when the step materially changes rendered
+presentation:
+
+- layout
+- styling
+- spacing
+- typography
+- color
+- motion
+- responsive presentation
+- theme or design-token work that changes rendered output
+
+Use `executor: "codex"` for:
+
+- copy-only UI changes
+- non-visual behavior changes
+- backend work
+- refactors, infra, tests, and general coding
+
+In this repo's workflow, `claudeVerify` defaults to `true` on every step.
+Treat it as a hard gate: do not mark a step `done` until `claude-bridge`
+verification returns `PASS`. If the bridge is unavailable, stop and surface
+the setup failure.
 
 ## Updating plan.json
 

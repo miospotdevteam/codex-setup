@@ -95,7 +95,7 @@ section of discovery. Without dep maps, you're guessing at consumers;
 with them, you have the complete picture.
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py <project_root> <file_path>
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py <project_root> "<file_path>"
 ```
 
 #### masterPlan.md — user-facing proposal (write-once)
@@ -103,13 +103,6 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py 
 This is the document the user reviews via Orbit. It communicates **intent**,
 not execution state. **It is frozen after Orbit approval** — never updated
 during execution. All runtime state lives in plan.json.
-
-This freeze does **not** mean execution should stop for another approval
-every time adjacent follow-through is discovered. After approval, keep
-executing through the approved objective. If you discover non-material
-follow-through that is clearly in service of the same objective, update
-only plan.json and continue. Reserve a new Orbit review for material scope
-or tradeoff changes (see "Updating an existing plan" below).
 
 Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
 checkboxes. No execution state. Just what, why, and what could go wrong.
@@ -132,6 +125,7 @@ specific behavior, then implements just enough to pass.
   "status": "pending",
   "skill": "look-before-you-leap:test-driven-development",
   "simplify": false,
+  "codexVerify": true,
   "files": ["src/lib/validate-email.ts", "tests/lib/validate-email.test.ts"],
   "description": "Add email validation function. Rejects empty strings, missing @, missing domain.",
   "acceptanceCriteria": "npx vitest run validate-email passes, tsc --noEmit clean.",
@@ -217,6 +211,22 @@ to see: inconsistencies, missing edge cases, unclear code, broken patterns.
 
 Default to `false` for backend logic, config changes, and steps already
 covered by automated tests.
+
+#### `codexVerify` — default to `true` on every step
+
+**Set `codexVerify: true` on every step by default.** Codex runs as an
+independent MCP agent (GPT-5.4 with its own engineering discipline plugin)
+that independently verifies the diff against the step's acceptance criteria,
+runs the project's type checker and tests, and checks consumer integrity
+via dep maps. It catches issues Claude might miss due to compaction or
+tunnel vision — bugs found early are cheap to fix.
+
+Only set `codexVerify: false` when the user explicitly opts out, or when
+the Codex MCP server is known to be unavailable. If unavailable at
+runtime, Codex verification is skipped gracefully.
+
+See `references/codex-verify-template.md` for the prompt templates used
+in the MCP call.
 
 #### Key rules
 
@@ -317,11 +327,6 @@ prompt. If they accept, context clears and the persistent-plans resumption
 protocol picks up the plan.json automatically — execution follows the
 conductor's Step 3 with engineering-discipline.
 
-From this point forward, the default is **continue execution**. Do not ask
-for another approval just because you found adjacent consistency work,
-mirrored fixes, extra verification, or other non-material follow-through
-needed to finish the approved objective correctly.
-
 ---
 
 ## Updating an existing plan
@@ -329,29 +334,8 @@ needed to finish the approved objective correctly.
 If the user changes requirements during planning (before Orbit approval),
 update BOTH plan.json and masterPlan.md to reflect the new scope. If the
 user changes requirements AFTER Orbit approval (during execution), update
-only plan.json — masterPlan.md is frozen.
-
-Treat post-approval changes in 2 categories:
-
-- **Non-material follow-through** → update only plan.json and continue.
-  This includes adjacent consistency fixes, mirrored changes in equivalent
-  copies, extra verification, docs/tests/cleanup needed to make the
-  approved work correct, or small step additions in the same area.
-- **Material scope or tradeoff change** → stop and get fresh review before
-  proceeding. Update plan.json to reflect the newly discovered work, then
-  revise masterPlan.md and present it through Orbit again.
-
-Treat a change as **material** when any of these are true:
-
-- It changes the user-visible goal or acceptance criteria in a meaningful way
-- It introduces a new product, UX, API, or architecture direction
-- It expands into a substantially new subsystem or unrelated file area
-- It requires a risky, destructive, or irreversible action not covered by
-  the approved plan
-
-Record all post-approval additions in plan.json. Use the `deviations`
-array when execution meaningfully diverges from the approved baseline,
-even if the change is still non-material enough to avoid a new review.
+only plan.json — masterPlan.md is frozen. Record the deviation in
+plan.json's `deviations` array so the change is visible after compaction.
 
 If a plan already exists in the target directory and you're asked to
 rewrite it, read the existing plan first to understand what changed. Do
@@ -377,10 +361,8 @@ This skill must NOT:
 - **Skip the sub-plan evaluation** — Step 4 is mandatory for every plan.
 
 **Autonomy limits**: reading discovery, reading checklists, writing plan
-files, writing sub-plans, and updating plan.json for non-material
-post-approval follow-through are autonomous. Overwriting an existing plan,
-skipping the user-approval handoff, and materially changing an approved
-plan require user confirmation.
+files, and writing sub-plans are autonomous. Overwriting an existing plan
+and skipping the user-approval handoff require user confirmation.
 
 **Prerequisites**: this skill is always invoked via the `look-before-you-leap`
 conductor at Step 2. `${CLAUDE_PLUGIN_ROOT}` must resolve for reference file
@@ -400,7 +382,5 @@ directory).
   the executing engineer writes the code.
 - **masterPlan.md is write-once** — frozen after Orbit approval. All runtime
   state lives in plan.json
-- **Approved plan means proceed** — after Orbit approval, keep executing
-  unless a material scope/tradeoff change requires a fresh review
 - **DRY / YAGNI** — only what's needed now, nothing speculative
 - **Sub-plans are mandatory** — if a step meets the criteria, it gets one

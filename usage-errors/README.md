@@ -3,6 +3,16 @@
 Use this directory to capture failures caused by the LBYL skill pack itself
 when those failures show up in other sessions or repos.
 
+## Claude findings vs skill incidents
+
+Do not mix the structured Claude reviewer output with human-written skill-pack
+incident reports:
+
+- `usage-errors/claude-findings/` is for machine-generated JSON findings from
+  the `claude-bridge` verification gate.
+- top-level `usage-errors/*.md` is for human-written reports about problems in
+  the skill pack itself.
+
 ## Directory layout
 
 - Keep open incidents at the top level of `usage-errors/`.

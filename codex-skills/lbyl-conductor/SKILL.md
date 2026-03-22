@@ -242,6 +242,26 @@ verifies against the contract and regenerates stale dep maps.
 The sections below cover behavior that is unique to the conductor and not
 covered in the companion skills.
 
+### Execution routing
+
+`skill` and `executor` are separate in this repo's plan format:
+
+- `skill` = which guidance Codex should follow
+- `executor` = who should perform the implementation work
+
+Execution rules:
+
+- If `executor: "codex"`, implement the step locally as usual.
+- If `executor: "claude"`, call the `claude-bridge` `frontend_implement`
+  tool with discovery/design context, exact step scope, and any Codex
+  follow-up prompt. Claude edits the same working tree directly.
+- Brainstorming uses the live Claude path via `claude-bridge`
+  `brainstorm_start` and `brainstorm_status`, not the headless worker path.
+
+Do not infer executor from `skill` alone. Theme/token work and other
+materially visual presentation changes should route to Claude even if the
+rest of the feature is ordinary engineering work.
+
 ### Dispatching sub-agents
 
 When a step benefits from parallel work (audits, multi-area exploration,
@@ -315,6 +335,19 @@ Follow **engineering-discipline Phase 3** (Verify Before Declaring Done).
 
 See `references/verification-commands.md` for framework-specific commands.
 Always check the project's own scripts first (package.json, Makefile).
+
+After local verification, check the step's `claudeVerify` field in
+`plan.json`:
+
+- If `false`, you may mark the step `done` after normal verification.
+- If `true`, Claude verification is a hard gate. Call `claude-bridge`
+  `verify_step` before marking the step `done`.
+- If `verify_step` returns non-PASS, fix the issues, then call `verify_step`
+  again on the same `bridgeSessionId`.
+- If `claude-bridge` is unavailable, stop and surface the setup failure.
+
+Non-PASS rounds should produce JSON findings under the configured
+`usage-errors/claude-findings` path. PASS should not write a findings file.
 
 Before declaring done, re-read the user's original request word by word.
 Confirm every requirement is implemented and working. If anything is

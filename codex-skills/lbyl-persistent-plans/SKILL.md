@@ -235,6 +235,10 @@ What "update the plan" means:
 is stale, your next context window starts from scratch. Every plan update
 is insurance against lost work.
 
+**Serialize plan updates.** Never run multiple `plan_utils.py` writes against
+the same `plan.json` in parallel. The file is the single source of truth, so
+update it sequentially.
+
 **The Compaction Test**: *"If compaction fired RIGHT NOW, could someone
 resume from plan.json alone?"* Ask this after every code edit. If the
 answer is no, update plan.json BEFORE your next edit.
@@ -248,30 +252,37 @@ This is a loop. Follow it mechanically.
 │  2. Find the next pending or in_progress step           │
 │  3. Mark it in_progress — write to disk NOW             │
 │                                                         │
-│  4. IF step has a subPlan:                              │
+│  4. Check the step's `executor`                         │
+│     - `codex`  -> implement locally                     │
+│     - `claude` -> call `claude-bridge` `frontend_implement` │
+│                                                         │
+│  5. IF step has a subPlan:                              │
 │     a. Find next pending group                          │
 │     b. Execute the group                                │
 │     c. Mark group done in plan.json                     │
 │     d. Checkpoint: update progress items                │
 │     e. IF all groups complete:                          │
-│        - Mark step done                                 │
+│        - Run local verification                         │
+│        - If `claudeVerify: true`, call `verify_step`    │
+│        - Only after PASS: mark step done                │
 │        - Add to completedSummary                        │
-│        - Run verification                               │
 │                                                         │
-│  5. IF step has no subPlan:                             │
+│  6. IF step has no subPlan:                             │
 │     a. Execute the step                                 │
 │     b. CHECKPOINT after every 2-3 file edits:           │
 │        - Update progress items via plan_utils.py        │
 │        - Write partial notes to result field            │
-│     c. When done: mark step done                        │
-│     d. Add to completedSummary                          │
+│     c. Run local verification                           │
+│     d. If `claudeVerify: true`, call `verify_step`      │
+│     e. Only after PASS: mark step done                  │
+│     f. Add to completedSummary                          │
 │                                                         │
-│  6. IF all steps are now done:                          │
+│  7. IF all steps are now done:                          │
 │     a. Run plan_utils.py complete-plan                  │
 │     b. Confirm plan moved from active/ to completed/    │
 │     c. Report completion to the user                    │
 │                                                         │
-│  7. ELSE: Loop back to step 1                           │
+│  8. ELSE: Loop back to step 1                           │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```

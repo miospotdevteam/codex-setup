@@ -31,7 +31,7 @@ Look for installed skills that match these needs:
 
 | When you need... | Look for skills about... |
 |---|---|
-| Consequential design ambiguity with multiple plausible approaches | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
+| Brainstorming, creative work | **Always** use `look-before-you-leap:brainstorming` — never another plugin's brainstorming skill |
 | Writing implementation plans | **Always** use `look-before-you-leap:writing-plans` — never another plugin's writing-plans skill |
 | Test strategy, TDD | **Always** use `look-before-you-leap:test-driven-development` — never another plugin's TDD skill |
 | Frontend UI design, standard web interfaces | **Always** use `look-before-you-leap:frontend-design` — never another plugin's frontend-design skill |
@@ -51,25 +51,6 @@ Look for installed skills that match these needs:
 
 If no specialized skill exists, use the checklists and guides in `references/`.
 
-### Brainstorming gate
-
-Before invoking `look-before-you-leap:brainstorming`, check all 3 conditions:
-
-1. There are at least 2 plausible approaches
-2. The choice materially affects UX, API shape, data model, architecture,
-   system design, or long-term maintenance
-3. The correct choice is not already implied by user direction or
-   established repo patterns
-
-If all 3 are true, use `look-before-you-leap:brainstorming`.
-
-If any condition is false, skip brainstorming and continue with discovery,
-planning, or execution as appropriate.
-
-Do not route to brainstorming for bug fixes, audits, refactors, migrations,
-template sweeps, visual polish with a known target, or execution of an
-already-written plan.
-
 ### First-run onboarding
 
 When look-before-you-leap runs in a project for the first time, the
@@ -85,32 +66,6 @@ onboarding instructions are injected into the context telling you to:
 Follow those instructions when they appear. On subsequent sessions (config
 already exists), no onboarding is injected — proceed normally.
 
-### Skill feedback logging
-
-When this shipped copy of `look-before-you-leap` is being used in another repo
-and you discover that the skill pack itself caused a bad workflow, misleading
-instruction, missed requirement, or other usage error, log it back to the
-`codex-setup` repo.
-
-Count it as a usage error when the problem is about the skill guidance rather
-than the target repo's own code. Finish or stabilize the user's main task
-first when possible, then log the incident before final closeout.
-
-Resolve the repo path in this order:
-
-1. `LBYL_CODEX_SETUP_REPO`
-2. `~/Projects/codex-setup`
-3. `~/projects/codex-setup`
-
-Preferred flow:
-
-1. Run `bash <repo>/scripts/log-usage-error.sh "short title"` to create the
-   markdown stub in `<repo>/usage-errors/`.
-2. Fill in the report with concrete evidence: what happened, what should have
-   happened, why it is skill-related, and the smallest plausible fix.
-3. Mention in your final response that you logged the usage error, or explain
-   clearly if the repo was unavailable and you could not log it.
-
 ---
 
 ## Step 1: Explore (mandatory before any task)
@@ -122,13 +77,14 @@ saves five minutes fixing.
 
 Before exploring, classify the task:
 
-- **Brainstorm first** only when the brainstorming gate above passes. Invoke
+- **Brainstorm first** if the task adds new user-facing behavior, introduces
+  a new abstraction, or has more than one reasonable design approach. Invoke
   `look-before-you-leap:brainstorming` — it produces a `design.md` that
-  feeds into Step 2. Examples: choosing between materially different
-  workflow, API, or architecture shapes for a new capability.
+  feeds into Step 2. Examples: "add priority to tasks", "build a dashboard",
+  "add team permissions". If in doubt, brainstorm — it's cheap.
 - **Explore directly** if the task is a bug fix, a rename/refactor, a
-  config change, execution of an existing plan, or the implementation path
-  is unambiguous (e.g., "add field X to existing type Y and propagate").
+  config change, or the implementation path is unambiguous (e.g., "add
+  field X to existing type Y and propagate").
 
 ### Exploration protocol
 
@@ -200,7 +156,15 @@ from zero.
 
 ## Step 2: Plan (write to disk before editing code)
 
-**Invoke `look-before-you-leap:writing-plans`** to produce the plan.
+**You MUST invoke `look-before-you-leap:writing-plans` via the Skill tool
+to produce the plan. Do NOT write plan.json or masterPlan.md directly.**
+The writing-plans skill applies rules you cannot replicate by hand: it sets
+`codexVerify: true` on every step, evaluates sub-plan criteria, applies
+TDD rhythm to progress items, and checks discipline checklists. Even if you
+have the schema memorized, skipping the skill means skipping those rules.
+
+Call: `Skill(skill: "look-before-you-leap:writing-plans")`
+
 The skill consumes your discovery.md, identifies applicable discipline
 checklists, structures TDD-granularity steps, and writes both:
 - `plan.json` — execution source of truth (hooks read this, updated during execution)
@@ -219,13 +183,18 @@ bash ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/init-plan-dir.sh
 Every plan.json MUST include these fields — hooks parse them, and
 compaction recovery depends on them. Do NOT invent your own schema:
 
-- **Top level**: `name`, `title`, `context`, `status`, `discovery`, `steps`,
-  `completedSummary`
+- **Top level**: `name`, `title`, `context`, `status`, `requiredSkills`,
+  `disciplines`, `discovery`, `steps`, `blocked`, `completedSummary`,
+  `deviations`
 - **`discovery` object** (required, not a separate file): `scope`,
-  `entryPoints`, `consumers`, `blastRadius`, `confidence`. Your exploration
-  findings go HERE, not just in discovery.md.
-- **Each step**: `id`, `title`, `status`, `skill`, `files`, `description`,
-  `acceptanceCriteria`, `progress`, `result`
+  `entryPoints`, `consumers`, `existingPatterns`, `testInfrastructure`,
+  `conventions`, `blastRadius`, `confidence`. Your exploration findings
+  go HERE, not just in discovery.md.
+- **Each step**: `id`, `title`, `status`, `skill`, `simplify`, `files`,
+  `description`, `acceptanceCriteria`, `progress`. Optional: `qa` (default
+  false), `codexVerify` (default true — set by writing-plans on every step
+  unless user opts out), `subPlan` (null if none), `result` (null until
+  completion)
 - **Each progress item**: `task`, `status`, `files` — all three fields,
   no exceptions. Progress arrays go INSIDE each step, never at the top level.
 
@@ -264,11 +233,6 @@ the flow is:
 The plan mode handoff happens **after** Orbit approval, not before. This
 ensures the user has reviewed and approved the plan before context clears.
 
-After approval, the default is to **continue through implementation**. Do
-not stop for another approval just because execution uncovers adjacent
-in-scope follow-through. Update plan.json and keep going unless the newly
-discovered work is a material scope or tradeoff change.
-
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
 obvious single-line change.
 
@@ -279,15 +243,6 @@ obvious single-line change.
 Follow **persistent-plans Phase 2** (Execute the Plan) for the execution
 loop, checkpointing, and result tracking. Follow **engineering-discipline
 Phase 2** (Make Changes Carefully) for the rules applied during execution.
-
-Use this post-approval rule during execution:
-
-- **Non-material follow-through** — update only plan.json and continue.
-  Examples: mirrored fixes in equivalent copies, adjacent consistency
-  updates, extra verification, or cleanup/tests/docs needed to make the
-  approved work correct.
-- **Material scope or tradeoff change** — stop and get user confirmation,
-  then present a revised plan for review if needed.
 
 ### Execution ordering: definitions before consumers
 
@@ -308,11 +263,45 @@ For renames: add the new name first (keeping the old one temporarily),
 update all consumers, then remove the old name. This ensures the codebase
 compiles at every step.
 
+### Pre-step deliverables checklist
+
+Before writing any code for a step, extract every deliverable from its
+`description` and `acceptanceCriteria` fields into a numbered checklist.
+This is separate from progress items (which track sub-tasks) — the
+deliverables checklist tracks *what the step must produce*, not *how*.
+
+**The process:**
+
+1. Re-read the step's `description` word by word
+2. Re-read its `acceptanceCriteria` word by word
+3. List every concrete deliverable as a numbered item — primary features,
+   secondary behaviors, adapted labels, i18n keys, documentation updates,
+   precondition checks, validation rules
+4. Write this checklist somewhere persistent (plan notes, discovery.md,
+   or inline as you work)
+5. **Before marking the step done**, walk through every item and verify
+   it was implemented
+
+This prevents the failure mode where you focus on the primary feature
+and forget secondary deliverables mid-implementation. Example: a step
+says "Tab label adapts to vertical (Menu vs Lookbook)" — you build the
+tab content but forget the label because you focused on the harder part.
+Or a step lists "Translation progress section" and "Retranslate button"
+among other features — you implement the novel parts and silently drop
+the ones that seemed straightforward.
+
+**The checklist is mandatory for every step.** Even simple steps benefit
+from it — the cost is 30 seconds of reading, and the payoff is catching
+scope cuts before they ship.
+
 ### Skill dispatch during execution
 
+**Skills MUST be invoked via the Skill tool — not approximated from memory.**
 When starting a step, check its `skill` field in plan.json. If the field
-is not `"none"`, **invoke that skill** before executing the step. The skill
-provides the execution guidance — follow its phases mechanically.
+is not `"none"`, **call `Skill(skill: "<value>")` before executing the
+step.** The skill provides execution guidance you cannot replicate by hand.
+Do NOT read a skill's SKILL.md and follow it manually — invoke it so the
+full skill context (references, checklists, hooks) loads properly.
 
 | Step `skill` value | What happens |
 |---|---|
@@ -436,6 +425,125 @@ QA sub-agent after marking the step `done`:
 QA dispatch is opt-in per step. The `writing-plans` skill decides which
 steps warrant it. Do not dispatch for steps without `qa: true`.
 
+### Codex verification (gate before marking done)
+
+When a step has `codexVerify: true` in plan.json, Codex MCP verification
+is a **gate** — you MUST get a Codex PASS **before** marking the step
+`done`. Codex runs on a different model (GPT-5.4) with its own
+engineering-discipline plugin, providing truly independent verification
+with fresh context.
+
+**Codex runs BEFORE done, not after.** The old flow (mark done → run
+Codex → fix) led to inaccurate result fields and false completion
+signals. The correct flow is: complete all progress items → run your
+own verification (tsc, lint, tests) → call Codex → fix any findings →
+re-verify until PASS → THEN mark the step done with the Codex verdict
+in the result field.
+
+**No pre-existing exemptions.** If the acceptance criteria say "tsc
+passes" and tsc does not pass, fix the issue — regardless of whether
+this step introduced the failure. "Pre-existing" is not a valid
+dismissal. Either fix the failure or get the acceptance criteria changed
+before the plan was approved.
+
+**One step at a time.** Each step gets its own Codex call. NEVER batch
+multiple steps into a single call — this creates massive prompts that
+take too long and make findings harder to act on.
+
+**Prerequisites**: The Codex MCP server must be configured globally
+(`claude mcp add --scope user codex -- codex mcp-server`). If the
+`mcp__codex__codex` tool is not available, skip Codex verification
+gracefully and note it in the step's result field.
+
+**Flow:**
+
+1. **Complete the step's work** — all progress items done, your own
+   verification passing (tsc, lint, tests).
+2. **Read the prompt template** from
+   `references/codex-verify-template.md`
+3. **Assemble the MCP call** by interpolating plan.json values into the
+   template for **this step only**:
+   - `developer-instructions`: role + discovery scope/consumers/blast
+     radius + step title/acceptance criteria/files/description
+   - `prompt`: verification task for the specific step
+4. **Call `mcp__codex__codex`** with:
+   ```json
+   {
+     "prompt": "<assembled prompt>",
+     "developer-instructions": "<assembled instructions>",
+     "sandbox": "danger-full-access",
+     "approval-policy": "never",
+     "cwd": "<project root>"
+   }
+   ```
+5. **Read Codex's response** (`content` field). If it reports issues:
+   - Codex auto-logs findings to `~/Projects/claude-code-setup/usage-errors/codex-findings/`
+     (initial: `*-step-N.json`, re-verify: `*-step-N-reverify-M.json`)
+   - Do NOT dismiss a Codex finding as "pre-existing," "out of scope,"
+     or "my interpretation is different." If you believe the finding is
+     wrong, you have exactly two options:
+     1. Quote the exact code path or plan text that proves it is wrong.
+     2. Ask the user to approve a plan / acceptance-criteria change
+        before continuing.
+     You may NOT dismiss, reinterpret, or partially address findings on
+     your own. Narrowing an acceptance criterion after a failed Codex
+     round counts as a plan deviation, not a normal fix.
+   - **Investigate before fixing.** Before editing any code:
+     1. Read the file(s) and line(s) Codex cited — do not fix from the
+        finding description alone.
+     2. State the root cause in one sentence.
+     3. If the finding has multiple parts, number each one and confirm
+        you will address ALL of them.
+     For heuristic, layout, timing, and threshold bugs, changing a
+     constant is NOT evidence of understanding. Do not bump margins,
+     delays, widths, retry counts, or safety factors until you have
+     recorded: (a) what concrete behavior is wrong, (b) what assumption
+     in the current code is false, (c) what measurement, trace, or
+     source proves your new value is justified.
+   - Fix each issue (follow engineering-discipline, not quick patches)
+   - **You MUST re-verify after fixing.** Call `mcp__codex__codex-reply`
+     with the saved `threadId` and the re-verify prompt from the template.
+     Do NOT skip this — `tsc --noEmit` passing is not the same as Codex
+     confirming your fixes are correct. Include root-cause rationale in
+     the re-verify prompt so Codex can evaluate whether the fix addresses
+     the actual cause, not just the symptom.
+   - Repeat the fix → re-verify loop until Codex reports PASS
+6. **THEN mark the step done** with the Codex verdict in the result
+   field: "Codex: PASS" or a summary of issues found and how they were
+   resolved. The verdict must come from Codex (the final PASS or
+   remaining issues), not from your own assessment. Do NOT plan to
+   "mark done" before Codex runs — Codex is a gate, not a formality.
+
+Codex verification is **on by default for every step** — the
+`writing-plans` skill sets `codexVerify: true` on all steps unless the
+user explicitly opts out. Do not dispatch for steps with
+`codexVerify: false`.
+
+The `verify-step-completion` hook enforces this gate: if a step with
+`codexVerify: true` is marked done without a Codex verdict in the result
+field, the hook reverts the step to `in_progress` and blocks.
+
+### Codex Findings Log
+
+Codex automatically logs its findings (when not PASS) to
+`~/Projects/claude-code-setup/usage-errors/codex-findings/`. This is
+configured in the developer-instructions passed to the MCP call — Codex
+writes the file itself before returning its response. You do not need
+to log findings manually.
+
+**Findings are logged on every verification round** — initial
+verification AND re-verify rounds. Each round gets its own file:
+- Initial: `YYYY-MM-DD-{plan}-step-{N}.json`
+- Re-verify: `YYYY-MM-DD-{plan}-step-{N}-reverify-{M}.json`
+
+This ensures the full verification history is auditable, not just the
+initial findings.
+
+The failure categories are: `INCOMPLETE_WORK`, `MISSED_CONSUMER`,
+`TYPE_SAFETY`, `SILENT_SCOPE_CUT`, `WRONG_PATTERN`, `MISSING_TEST`,
+`MISSING_I18N`, `OTHER`. These help identify which plugin instructions
+need strengthening over time.
+
 ---
 
 ## Step 4: Verify (every time, no exceptions)
@@ -452,10 +560,6 @@ Follow its root cause investigation before attempting corrections.
 Before declaring done, re-read the user's original request word by word.
 Confirm every requirement is implemented and working. If anything is
 unaddressed, finish it or explicitly flag it.
-
-If the skill pack itself caused a usage error in this session, log it back to
-the `codex-setup` checkout under `usage-errors/` before final closeout when
-feasible.
 
 ---
 
@@ -485,6 +589,10 @@ Hooks enforce this discipline automatically. Key behaviors to know:
   a reminder fires. Update the plan immediately.
 - **Plan completion guard**: Cannot move a plan to `completed/` if steps
   remain unfinished. Cannot stop if the active plan has unfinished steps.
+- **Script warnings**: When `plan_utils.py` emits a warning (e.g., "step
+  marked done with no result"), treat it as an error. Stop and fix the
+  issue before continuing. Warnings exist because something is wrong —
+  they are not informational noise to ignore.
 - **Sub-agent injection**: Engineering discipline is automatically injected
   into every sub-agent prompt.
 - **PostCompact resumption**: After context compaction, a dedicated hook
@@ -496,6 +604,56 @@ describes. Do not use alternative tools to work around it.
 
 ---
 
+## Plugin Error Logging
+
+When you encounter an error **caused by this plugin** — a hook script
+failing, `plan_utils.py` crashing, a schema validation error, a script
+not found, or any unexpected behavior from plugin hooks or scripts —
+document it immediately:
+
+1. **Create a `.md` file** in `usage-errors/` at the **project root** with
+   the naming convention `YYYY-MM-DD-<short-description>.md`.
+2. **Include**:
+   - What you were doing when the error occurred
+   - The hook/script/skill that errored
+   - The full error output
+   - Your best guess at the root cause
+3. **Then fix the issue before continuing.** If the error is in your
+   command arguments (wrong step number, missing file), fix and retry.
+   If the error is a genuine plugin bug (script crash on valid input),
+   log it and continue — the bug is not yours to fix mid-task
+4. **When the error is fixed**, move the `.md` file to `usage-errors/resolved/`
+
+This applies only to errors originating from the plugin itself (hooks,
+scripts, skills, plan infrastructure). Do NOT log errors from the user's
+project code, build tools, or unrelated tooling.
+
+Example filename: `2026-03-19-plan-utils-key-error.md`
+
+---
+
+## Codex Lessons Pipeline
+
+When Codex catches a behavioral pattern that the existing rules should
+have prevented (e.g., "guessed API response shape" maps to "Read API
+handlers before typing responses"), the lesson belongs in the centralized
+pipeline — not in memory.
+
+**Location**: `codex-lessons/` at the plugin repo root.
+
+**Workflow**: After a session where Codex found genuine bugs, analyze the
+root causes. If a bug reveals a gap in engineering-discipline rules (a
+habit that would have prevented it), write a proposal to
+`usage-errors/codex-lessons/proposals/`. During periodic review, proposals
+are either promoted to plugin rules or discarded.
+
+This is distinct from error logging (which tracks plugin bugs) and memory
+(which tracks procedural preferences). The lessons pipeline tracks
+**behavioral rule gaps** — patterns Codex keeps catching that the rules
+should make impossible.
+
+---
+
 ## Reference Files
 
 All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
@@ -503,7 +661,6 @@ All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
 **Read during exploration:**
 - `references/exploration-protocol.md` — 8-question checklist (answer ALL before planning)
 - `references/plan-schema.md` — full plan.json schema (read when writing a plan)
-- `usage-errors/README.md` in the resolved `codex-setup` checkout — usage-error report format and logging rules
 
 **Read when a step involves that discipline:**
 - `references/testing-checklist.md`, `references/security-checklist.md`,
@@ -515,6 +672,9 @@ All paths relative to `${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/`:
 - `references/testing-strategy.md`, `references/security-guide.md`,
   `references/api-contracts-guide.md`, `references/dependency-mapping.md`
 - `references/debugging-root-cause-tracing.md`, `references/debugging-defense-in-depth.md`
+
+**Codex verification:**
+- `references/codex-verify-template.md` — prompt templates for Codex MCP verification calls
 
 **Scripts:**
 - `scripts/init-plan-dir.sh` — initialize `.temp/plan-mode/`

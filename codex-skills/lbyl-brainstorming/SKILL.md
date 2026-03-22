@@ -53,7 +53,28 @@ to build a picture of the relevant codebase:
 If this is a **greenfield project** with no existing codebase, skip the
 reads and note the greenfield context — proceed directly to questions.
 
-### 2. Ask questions — one at a time
+### 2. Route the conversation to live Claude
+
+In this repo's workflow, brainstorming is handled by the live Claude session,
+not by a Codex-only Q&A loop.
+
+If the `claude-bridge` MCP server is available:
+
+1. Call `brainstorm_start` with the project cwd, a concise session title, and
+   a prompt that tells Claude to:
+   - ask one question at a time
+   - propose defaults when the user is unsure
+   - compare alternatives before converging
+   - stop once the design is concrete enough for `design.md`
+2. Tell the user the live brainstorming session is opening in VS Code.
+3. Use `brainstorm_status` periodically to follow the transcript and capture
+   decisions.
+
+If `claude-bridge` is unavailable or the extension is not running, stop and
+surface the setup failure. Do not silently fall back to a Codex-only
+brainstorming session.
+
+### 3. Ask questions — one at a time
 
 Explore the idea through conversation. One question per message. Prefer
 multiple choice when the options are clear, open-ended when they're not.
@@ -71,13 +92,13 @@ If the user **can't answer** a question (doesn't know constraints yet,
 hasn't decided), propose reasonable defaults and flag them explicitly as
 assumptions that can be revised later.
 
-### 3. Propose approaches
+### 4. Propose approaches
 
 Present 2-3 different ways to build it. For each one: what it looks like,
 what it's good at, what the trade-offs are. Lead with your recommendation
 and say why.
 
-### 4. Present the design
+### 5. Present the design
 
 Walk through the design section by section. Scale detail to complexity —
 a few sentences for straightforward parts, more for nuanced ones. After
@@ -86,7 +107,7 @@ each section, check: does this look right?
 Cover what's relevant: architecture, components, data flow, error
 handling, testing. Skip sections that don't apply.
 
-### 5. Save and transition
+### 6. Save and transition
 
 Once approved:
 

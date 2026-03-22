@@ -5,6 +5,7 @@ REPO_URL="${REPO_URL:-https://github.com/miospotdevteam/codex-setup.git}"
 BRANCH="${BRANCH:-main}"
 CHECKOUT_DIR="${CHECKOUT_DIR:-$HOME/Projects/codex-setup}"
 SKIP_PULL="${SKIP_PULL:-0}"
+SKIP_CLAUDE_BRIDGE_INSTALL="${SKIP_CLAUDE_BRIDGE_INSTALL:-0}"
 
 resolve_cmd() {
   command -v "$1" 2>/dev/null || {
@@ -77,6 +78,9 @@ main() {
   echo "Using checkout: $CHECKOUT_DIR"
   echo "Repo URL: $REPO_URL"
   echo "Branch: $BRANCH"
+  if [ "$SKIP_CLAUDE_BRIDGE_INSTALL" = "1" ]; then
+    echo "claude-bridge install will be skipped (SKIP_CLAUDE_BRIDGE_INSTALL=1)"
+  fi
 
   (
     cd "$CHECKOUT_DIR"

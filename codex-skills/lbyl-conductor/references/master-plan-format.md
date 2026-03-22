@@ -27,7 +27,9 @@ Just what, why, and what could go wrong.
 
 > **For Codex:** REQUIRED SKILL: Use lbyl-engineering-discipline
 > for all steps. Also invoke each step's `Skill` field when it is not `none`.
-> See the Required Skills section for the full list.
+> Follow each step's `Executor` field when implementing and honor each step's
+> `Claude Verify` gate before marking it done. See the Required Skills
+> section for the full list.
 
 ## Context
 
@@ -86,6 +88,8 @@ disciplines.">
 
 ### Step 1: <Title>
 - **Skill**: `lbyl-refactoring` | none
+- **Executor**: `codex` | `claude`
+- **Claude Verify**: true/false
 - **Simplify**: true/false
 - **Sub-plan**: none
 - **Files involved**: `src/foo.ts`, `src/bar.ts`
@@ -165,6 +169,8 @@ High — issue is clear, fix is straightforward.
 
 ### Step 1: Fix button alignment
 - **Skill**: none
+- **Executor**: `codex`
+- **Claude Verify**: true
 - **Simplify**: false
 - **Sub-plan**: none
 - **Files involved**: `src/app/(auth)/login/page.tsx`
@@ -192,3 +198,8 @@ masterPlan.md and plan.json are written together during the planning phase
 | **Read by tooling** | Yes | Legacy fallback only |
 
 The plan.json schema is documented in `references/plan-schema.md`.
+
+When a step changes visual presentation materially, set `Executor: claude`
+even if the guiding skill is still `lbyl-frontend-design`. Theme/token
+changes count as visual changes. Copy-only UI changes stay with
+`Executor: codex`.

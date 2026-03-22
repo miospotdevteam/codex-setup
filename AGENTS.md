@@ -40,7 +40,10 @@ Upstream skills also shipped from this repo:
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
+- Serialize `plan_utils.py` writes; never update the same `plan.json` in parallel.
 - Verify with project typecheck, lint, and relevant tests before declaring done.
+- Treat `claudeVerify: true` as a hard gate: do not mark a step `done` until `claude-bridge` returns `PASS`.
+- Route live brainstorming through `claude-bridge` in VS Code and route materially visual frontend steps to Claude via `executor: "claude"`.
 - If a future session uncovers a failure caused by the LBYL skill pack itself, log it here under `usage-errors/`, preferably via `bash scripts/log-usage-error.sh "short title"`.
 - Never silently drop requested scope.
 
@@ -61,3 +64,5 @@ installed directly from `look-before-you-leap/skills/`. `immersive-frontend`
 remains installed as the separate motion-heavy frontend skill. For
 multi-machine use, prefer `scripts/bootstrap-codex-skills-from-github.sh` so
 each machine clones or pulls the GitHub repo and then runs the local installer.
+The installer also configures `claude-bridge` globally for Codex unless
+`SKIP_CLAUDE_BRIDGE_INSTALL=1` is set.

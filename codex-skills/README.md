@@ -32,10 +32,22 @@ If a local Orbit checkout is available, the same installer also configures the
 `orbit` MCP server in Codex and refreshes the Orbit VS Code extension so Orbit
 review tools are available at startup in future Codex sessions.
 
+The same installer also configures `claude-bridge` globally for Codex:
+
+- live Claude brainstorming in VS Code
+- headless Claude frontend implementation for materially visual steps
+- hard Claude verification before `claudeVerify` steps are marked done
+
 To install the skill pack without Orbit:
 
 ```bash
 SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To install the skill pack without the Claude bridge:
+
+```bash
+SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/install-codex-skills.sh
 ```
 
 To bootstrap Orbit only:
@@ -68,9 +80,14 @@ Ask for the skills explicitly:
 - There are no Claude plugin hooks here. The discipline is carried by the
   skill text, local `AGENTS.md`, on-disk plans, and Orbit-backed MCP review
   tooling.
+- Claude is still part of the default workflow through `claude-bridge`:
+  live brainstorming, Claude-routed visual frontend steps, and the hard
+  verification gate.
 - The conductor assumes the companion skills are active for coding work.
 - Persistent plans use `plan.json` as execution state and `masterPlan.md` as
   the frozen Orbit-reviewed proposal.
+- Plan steps now separate `skill` from `executor`, and default to
+  `claudeVerify: true`.
 - Dep maps, when used, are configured from `.codex/lbyl-deps.json`.
 - In the default Codex workflow for this repo, new plan artifacts go through
   `orbit_await_review` before execution proceeds unless the user explicitly

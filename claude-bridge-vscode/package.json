@@ -1,0 +1,57 @@
+{
+  "name": "claude-bridge-vscode",
+  "displayName": "Claude Bridge",
+  "version": "0.1.0",
+  "description": "Live brainstorming surface for claude-bridge sessions",
+  "publisher": "lbyl",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Claude Bridge",
+      "type": "object",
+      "properties": {
+        "claudeBridge.stateRoot": {
+          "type": "string",
+          "default": "~/.claude-bridge",
+          "description": "Shared state directory used by the claude-bridge MCP server and the VS Code extension."
+        },
+        "claudeBridge.pollIntervalMs": {
+          "type": "number",
+          "default": 1200,
+          "minimum": 250,
+          "description": "How often the extension polls for live brainstorming requests."
+        },
+        "claudeBridge.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python executable used to launch the live Claude wrapper script."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "~5.4.5"
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "tsc --noEmit",
+    "package": "npm run build && npx @vscode/vsce package",
+    "prepackage": "npm run build"
+  }
+}
+
