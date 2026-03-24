@@ -9,34 +9,28 @@ Auto-regenerates stale modules before querying. Scans ALL dep maps
 for cross-module dependents.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import subprocess
 import sys
+from typing import Any
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from dep_config import describe_config_sources, read_config
+
 GENERATE_SCRIPT = os.path.join(SCRIPT_DIR, "deps-generate.py")
-READ_CONFIG = os.path.join(SCRIPT_DIR, "..", "..", "..", "hooks", "lib", "read-config.py")
 
 
-def read_config(project_root):
-    try:
-        result = subprocess.run(
-            [sys.executable, READ_CONFIG, project_root],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout)
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
-        pass
-    return {}
-
-
-def module_slug(module_path):
+def module_slug(module_path: str) -> str:
     return module_path.replace("/", "-")
 
 
-def find_module_for_file(file_path, modules):
+def find_module_for_file(file_path: str, modules: list[str]) -> str | None:
     """Find which configured module a file belongs to (longest prefix match)."""
     best = None
     for mod in modules:
@@ -46,48 +40,48 @@ def find_module_for_file(file_path, modules):
     return best
 
 
-def regen_if_stale(project_root, module_path):
+def regen_if_stale(project_root: str, module_path: str) -> None:
     """Regenerate a module's dep map if stale."""
     try:
         subprocess.run(
             [sys.executable, GENERATE_SCRIPT, project_root, "--module", module_path],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=120, check=False,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
 
-def get_stale_modules(deps_dir):
+def get_stale_modules(deps_dir: str) -> set[str]:
     stale_file = os.path.join(deps_dir, ".stale")
     if not os.path.exists(stale_file):
         return set()
     try:
-        with open(stale_file) as f:
-            return {line.strip() for line in f if line.strip()}
+        with open(stale_file, encoding="utf-8") as handle:
+            return {line.strip() for line in handle if line.strip()}
     except (FileNotFoundError, PermissionError):
         return set()
 
 
-def load_all_dep_maps(deps_dir):
+def load_all_dep_maps(deps_dir: str) -> dict[str, dict[str, list[str]]]:
     """Load all deps-*.json files from deps_dir."""
-    maps = {}
+    maps: dict[str, dict[str, list[str]]] = {}
     if not os.path.isdir(deps_dir):
         return maps
     for fname in os.listdir(deps_dir):
         if fname.startswith("deps-") and fname.endswith(".json"):
             fpath = os.path.join(deps_dir, fname)
             try:
-                with open(fpath) as f:
-                    maps[fname] = json.load(f)
+                with open(fpath, encoding="utf-8") as handle:
+                    maps[fname] = json.load(handle)
             except (json.JSONDecodeError, FileNotFoundError):
                 pass
     return maps
 
 
-def query_file(file_path, all_maps):
+def query_file(file_path: str, all_maps: dict[str, dict[str, list[str]]]) -> dict[str, Any]:
     """Find dependencies and dependents for a file across all dep maps."""
-    dependencies = []
-    dependents = []
+    dependencies: list[str] = []
+    dependents: list[str] = []
     found_in_module = None
 
     for map_name, dep_map in all_maps.items():
@@ -109,10 +103,9 @@ def query_file(file_path, all_maps):
     }
 
 
-def format_human(result):
+def format_human(result: dict[str, Any]) -> str:
     """Format query result for human consumption."""
-    lines = []
-    lines.append(f"FILE: {result['file']}")
+    lines = [f"FILE: {result['file']}"]
     if result["found_in"]:
         lines.append(f"MODULE: {result['found_in'].replace('deps-', '').replace('.json', '').replace('-', '/')}")
     lines.append("")
@@ -170,7 +163,10 @@ def main():
     modules = dep_maps_config.get("modules", [])
 
     if not modules:
-        print("Error: No dep_maps.modules configured in .claude/look-before-you-leap.local.md", file=sys.stderr)
+        print(
+            f"Error: No dep_maps.modules configured in {describe_config_sources()}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     deps_dir_rel = dep_maps_config.get("dir", ".claude/deps")

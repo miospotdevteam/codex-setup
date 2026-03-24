@@ -6,7 +6,8 @@ Usage:
     python3 deps-generate.py <project_root> --all
     python3 deps-generate.py <project_root> --stale-only
 
-Reads dep_maps config from .claude/look-before-you-leap.local.md.
+Reads dep_maps config from .codex/lbyl-deps.json when available, falling back
+to .claude/look-before-you-leap.local.md.
 Runs madge per module for static imports, then scans for dynamic imports
 (import(), React.lazy, next/dynamic, etc.), normalizes all paths to
 repo-relative, writes to .claude/deps/deps-{slug}.json.
@@ -19,21 +20,10 @@ import subprocess
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-READ_CONFIG = os.path.join(SCRIPT_DIR, "..", "..", "..", "hooks", "lib", "read-config.py")
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
 
-
-def read_config(project_root):
-    """Read project config via read-config.py (matches hook pattern)."""
-    try:
-        result = subprocess.run(
-            [sys.executable, READ_CONFIG, project_root],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout)
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
-        pass
-    return {}
+from dep_config import describe_config_sources, read_config
 
 
 def module_slug(module_path):
@@ -443,7 +433,10 @@ def main():
     modules = dep_maps.get("modules", [])
 
     if not modules:
-        print("No dep_maps.modules configured in .claude/look-before-you-leap.local.md", file=sys.stderr)
+        print(
+            f"No dep_maps.modules configured in {describe_config_sources()}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     mode = sys.argv[2]
