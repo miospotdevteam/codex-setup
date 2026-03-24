@@ -17,6 +17,8 @@ CLAUDE_TIMEOUT_SECONDS = int(os.environ.get("CLAUDE_BRIDGE_TIMEOUT", "10800"))
 DEFAULT_FINDINGS_DIR = (
     Path.home() / "Projects" / "codex-setup" / "usage-errors" / "claude-findings"
 )
+HOOKS_DISABLED_SETTINGS = {"disableAllHooks": True}
+REVIEW_SETTING_SOURCES = "project,local"
 VERIFY_CATEGORIES = {
     "INCOMPLETE_WORK",
     "MISSED_CONSUMER",
@@ -28,6 +30,15 @@ VERIFY_CATEGORIES = {
     "OTHER",
 }
 VERIFY_SEVERITIES = {"HIGH", "MEDIUM", "LOW"}
+ATTACK_CATEGORIES = {
+    "MISSING_SCOPE",
+    "OVER_SCOPE",
+    "WRONG_SEQUENCE",
+    "MISSING_VERIFICATION",
+    "MISSING_DISCOVERY",
+    "RISKY_ASSUMPTION",
+    "OTHER",
+}
 
 
 class ClaudeBridgeError(RuntimeError):
@@ -270,6 +281,7 @@ class SessionManager:
 
     def run_frontend_implementation(self, args: dict[str, Any]) -> dict[str, Any]:
         cwd = str(Path(args["cwd"]).expanduser().resolve())
+        plugin_dir = self.require_plugin_dir(args.get("pluginDir"))
         record = self._get_or_create_session(
             mode="frontend",
             cwd=cwd,
@@ -287,8 +299,41 @@ class SessionManager:
             prompt=prompt,
             schema=self.load_schema("frontend-implement.json"),
             allow_edits=True,
-            plugin_dir=self.resolve_plugin_dir(args.get("pluginDir")),
+            plugin_dir=plugin_dir,
         )
+        result.update(
+            {
+                "bridgeSessionId": record.bridge_session_id,
+                "claudeSessionId": record.claude_session_id,
+                "round": record.rounds,
+            }
+        )
+        return result
+
+    def run_plan_attack(self, args: dict[str, Any]) -> dict[str, Any]:
+        cwd = str(Path(args["cwd"]).expanduser().resolve())
+        plugin_dir = self.require_plugin_dir(args.get("pluginDir"))
+        record = self._get_or_create_session(
+            mode="plan-attack",
+            cwd=cwd,
+            bridge_session_id=args.get("bridgeSessionId"),
+            metadata={
+                "planName": args["planName"],
+                "planPath": str(Path(args["planPath"]).expanduser().resolve()),
+                "masterPlanPath": str(Path(args["masterPlanPath"]).expanduser().resolve()),
+            },
+        )
+        prompt = self._build_attack_plan_prompt(args)
+        result = self._run_structured_claude(
+            record=record,
+            cwd=Path(cwd),
+            prompt=prompt,
+            schema=self.load_schema("attack-plan.json"),
+            allow_edits=False,
+            plugin_dir=plugin_dir,
+            allowed_tools=self._read_only_allowed_tools(),
+        )
+        self._validate_attack_findings(result)
         result.update(
             {
                 "bridgeSessionId": record.bridge_session_id,
@@ -300,6 +345,7 @@ class SessionManager:
 
     def run_verification(self, args: dict[str, Any]) -> dict[str, Any]:
         cwd = str(Path(args["cwd"]).expanduser().resolve())
+        plugin_dir = self.require_plugin_dir(args.get("pluginDir"))
         record = self._get_or_create_session(
             mode="verify",
             cwd=cwd,
@@ -317,20 +363,8 @@ class SessionManager:
             prompt=prompt,
             schema=self.load_schema("verify-step.json"),
             allow_edits=False,
-            plugin_dir=None,
-            disable_slash_commands=True,
-            allowed_tools=[
-                "Read",
-                "Grep",
-                "Glob",
-                "LS",
-                "Bash(git status:*)",
-                "Bash(git diff:*)",
-                "Bash(find:*)",
-                "Bash(bash -n:*)",
-                "Bash(python3 -m py_compile:*)",
-                "Bash(python3 -m unittest:*)",
-            ],
+            plugin_dir=plugin_dir,
+            allowed_tools=self._read_only_allowed_tools(),
         )
         self._validate_findings(result)
         findings_path: str | None = None
@@ -354,6 +388,41 @@ class SessionManager:
                 raise ClaudeBridgeError(f"Claude returned an invalid severity: {severity}")
             if category not in VERIFY_CATEGORIES:
                 raise ClaudeBridgeError(f"Claude returned an invalid category: {category}")
+
+    def _validate_attack_findings(self, result: dict[str, Any]) -> None:
+        verdict = result.get("verdict")
+        if verdict not in {"APPROVE", "REVISE"}:
+            raise ClaudeBridgeError(f"Claude returned an invalid attack verdict: {verdict}")
+        for finding in result.get("findings", []):
+            severity = finding.get("severity")
+            category = finding.get("category")
+            if severity not in VERIFY_SEVERITIES:
+                raise ClaudeBridgeError(f"Claude returned an invalid severity: {severity}")
+            if category not in ATTACK_CATEGORIES:
+                raise ClaudeBridgeError(f"Claude returned an invalid attack category: {category}")
+
+    def _read_only_allowed_tools(self) -> list[str]:
+        return [
+            "Skill",
+            "Read",
+            "Grep",
+            "Glob",
+            "Bash(git status:*)",
+            "Bash(git diff:*)",
+            "Bash(find:*)",
+            "Bash(bash -n:*)",
+            "Bash(python3 -m py_compile:*)",
+            "Bash(python3 -m unittest:*)",
+        ]
+
+    def require_plugin_dir(self, override: str | None = None) -> str:
+        plugin_dir = self.resolve_plugin_dir(override)
+        if plugin_dir:
+            return plugin_dir
+        raise ClaudeBridgeError(
+            "Claude plugin directory not found. Set CLAUDE_BRIDGE_PLUGIN_DIR or install "
+            "the local look-before-you-leap checkout before using claude-bridge."
+        )
 
     def _write_findings_file(
         self,
@@ -391,7 +460,6 @@ class SessionManager:
         schema: dict[str, Any],
         allow_edits: bool,
         plugin_dir: str | None,
-        bare_mode: bool = False,
         disable_slash_commands: bool = False,
         allowed_tools: list[str] | None = None,
     ) -> dict[str, Any]:
@@ -413,9 +481,11 @@ class SessionManager:
             "acceptEdits" if allow_edits else "default",
             "--add-dir",
             str(cwd),
+            "--setting-sources",
+            REVIEW_SETTING_SOURCES,
+            "--settings",
+            json.dumps(HOOKS_DISABLED_SETTINGS),
         ]
-        if bare_mode:
-            cmd.append("--bare")
         if disable_slash_commands:
             cmd.append("--disable-slash-commands")
         if allowed_tools:
@@ -534,7 +604,7 @@ class SessionManager:
     def _normalize_error(self, message: str) -> str:
         if "Not logged in" in message or "/login" in message:
             return (
-                "Claude CLI is not authenticated for headless bridge use. "
+                "Claude CLI is not authenticated for bridge use. "
                 "Run `claude /login` and then retry."
             )
         return message.strip() or "Claude bridge request failed."
@@ -615,6 +685,20 @@ Rules:
 - Keep changes focused on this step.
 - Return only JSON matching the requested schema.
 """.strip()
+
+    def _build_attack_plan_prompt(self, args: dict[str, Any]) -> str:
+        template = (
+            self.repo_root / "claude-bridge" / "prompts" / "attack-plan-template.md"
+        ).read_text(encoding="utf-8")
+        mapping = {
+            "cwd": str(Path(args["cwd"]).expanduser().resolve()),
+            "planName": args["planName"],
+            "planPath": str(Path(args["planPath"]).expanduser().resolve()),
+            "masterPlanPath": str(Path(args["masterPlanPath"]).expanduser().resolve()),
+            "userGoal": args.get("userGoal") or "(not provided)",
+            "discoverySummary": args.get("discoverySummary") or "(not provided)",
+        }
+        return template.format_map(mapping)
 
     def _build_verify_prompt(self, args: dict[str, Any]) -> str:
         template = (

@@ -80,6 +80,24 @@ def frontend_tool_schema() -> dict[str, Any]:
     }
 
 
+def attack_plan_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["cwd", "planName", "planPath", "masterPlanPath"],
+        "properties": {
+            "cwd": {"type": "string"},
+            "planName": {"type": "string"},
+            "planPath": {"type": "string"},
+            "masterPlanPath": {"type": "string"},
+            "userGoal": {"type": "string"},
+            "discoverySummary": {"type": "string"},
+            "bridgeSessionId": {"type": "string"},
+            "pluginDir": {"type": "string"},
+        },
+    }
+
+
 def verify_tool_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -129,6 +147,15 @@ TOOLS = [
             "live Claude brainstorming session launched by brainstorm_start."
         ),
         "inputSchema": brainstorm_status_schema(),
+    },
+    {
+        "name": "attack_plan",
+        "description": (
+            "Run a headless Claude adversarial review of a draft plan written by Codex. "
+            "Claude reads plan.json and masterPlan.md, returns structured findings, "
+            "and does not become the plan authority."
+        ),
+        "inputSchema": attack_plan_schema(),
     },
     {
         "name": "frontend_implement",
@@ -244,6 +271,8 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                 result = manager.read_brainstorm_status(
                     arguments["sessionId"], arguments.get("tailEvents", 40)
                 )
+            elif name == "attack_plan":
+                result = manager.run_plan_attack(arguments)
             elif name == "frontend_implement":
                 result = manager.run_frontend_implementation(arguments)
             elif name == "verify_step":

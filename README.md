@@ -75,14 +75,18 @@ The installer also configures `claude-bridge` globally for Codex:
 
 - registers a global Codex MCP server named `claude-bridge`
 - builds and installs the `claude-bridge` VS Code extension
-- enables live Claude brainstorming in VS Code plus headless Claude frontend
-  implementation and verification flows inside Codex sessions
+- enables live Claude brainstorming in VS Code plus authenticated Claude plan-attack,
+  frontend implementation, and verification flows inside Codex sessions
 
 This path assumes:
 
 - `claude` CLI is installed and authenticated
 - `code` CLI is available
 - `npm`, `node`, and `python3` are available locally
+- a local Claude-control checkout is available at
+  `~/Projects/claude-code-setup/look-before-you-leap` or
+  `~/projects/claude-code-setup/look-before-you-leap`, or
+  `CLAUDE_BRIDGE_PLUGIN_DIR` points at that plugin directory
 
 To skip Orbit during a skill install:
 
@@ -171,8 +175,9 @@ Typical prompts:
 
 For coding work, the expected default is:
 
-- explore first
+- explore first, in parallel
 - write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
+- have Codex write the draft plan, then run a Claude plan-attack pass, then let Codex accept only the relevant findings before Orbit review
 - if `codex-guard` is installed, use `validate-plan`, `begin-step`, `checkpoint`, and `complete-step` during execution
 - update the plan every 2-3 file edits
 - run relevant verification before declaring done
@@ -216,13 +221,22 @@ Current non-goals:
 
 This repo now assumes an intentionally asymmetric split:
 
-- Codex is the orchestrator and default implementer.
-- Claude handles live brainstorming through `claude-bridge`.
+- Codex is the orchestrator, runs exploration in parallel, and is the default implementer.
+- Claude handles all brainstorming through `claude-bridge`.
+- Codex writes draft plans, Claude attacks them through the authenticated
+  `attack_plan` tool, and Codex decides which findings are relevant enough to
+  fold back into the plan before Orbit review.
 - Claude handles materially visual frontend implementation through the
   headless `frontend_implement` tool.
 - Claude is a hard verification gate before steps are marked `done`.
 
-Plan steps should carry explicit routing metadata:
+`claude-bridge` now calls Claude in authenticated non-`--bare` mode with
+`disableAllHooks: true`, `--setting-sources project,local`, and the local
+`look-before-you-leap` plugin passed via `--plugin-dir`. That keeps Claude's
+skills available while preventing the plugin hook layer from mutating Codex
+plan state during bridge runs.
+
+Plan steps should carry conductor-owned routing metadata:
 
 - `executor: "claude"` for materially visual presentation changes
 - `executor: "codex"` for copy-only UI changes, behavior-only UI changes, and
@@ -230,7 +244,8 @@ Plan steps should carry explicit routing metadata:
 - `claudeVerify: true` by default on every step
 
 Brainstorming uses a live Claude session surfaced in VS Code and exposed back
-to Codex through `brainstorm_start` and `brainstorm_status`.
+to Codex through `brainstorm_start` and `brainstorm_status`. Plan attack uses a
+headless Claude pass exposed through `attack_plan`.
 
 Non-PASS verification rounds write JSON findings to
 [`usage-errors/claude-findings`](/Users/robertobortolaso/Projects/codex-setup/usage-errors/claude-findings).

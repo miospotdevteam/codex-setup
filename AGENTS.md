@@ -37,14 +37,16 @@ Upstream skills also shipped from this repo:
 
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
+- Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+- For non-trivial work, Codex writes the draft plan, Claude attacks it through `claude-bridge`, Codex evaluates the findings and updates the draft only when the findings are relevant, then Orbit reviews the revised plan.
 - If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Serialize `plan_utils.py` writes; never update the same `plan.json` in parallel.
 - Verify with project typecheck, lint, and relevant tests before declaring done.
 - Treat `claudeVerify: true` as a hard gate: do not mark a step `done` until `claude-bridge` returns `PASS`.
-- Route live brainstorming through `claude-bridge` in VS Code and route materially visual frontend steps to Claude via `executor: "claude"`.
+- Route all brainstorming through `claude-bridge` in VS Code and route materially visual frontend steps to Claude via the conductor-resolved `executor: "claude"`.
 - If a future session uncovers a failure caused by the LBYL skill pack itself, log it here under `usage-errors/`, preferably via `bash scripts/log-usage-error.sh "short title"`.
 - Never silently drop requested scope.
 

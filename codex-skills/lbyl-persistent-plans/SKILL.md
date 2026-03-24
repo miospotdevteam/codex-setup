@@ -220,6 +220,10 @@ field contains groups directly:
 
 ## Phase 2: Execute the Plan
 
+This phase assumes Step 1 exploration already happened in parallel and Step 2
+planning already followed the Codex-write, Claude-attack, Codex-evaluate,
+Orbit-review sequence before execution began.
+
 ### The Checkpoint Rule (THE #1 RULE OF EXECUTION)
 
 **After every 2-3 code file edits, you MUST update plan.json on disk.**

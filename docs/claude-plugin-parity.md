@@ -72,7 +72,9 @@ It did not have:
 |---|---|---|---|---|
 | Session-start enforcement | Claude `SessionStart` hook | Skill text only | High | Install `codex-guard` through Codex `[sandbox].setup` so session start locks files and resumes in-progress steps |
 | Plan-before-edit gate | `PreToolUse` hook on `Edit|Write|Bash` | Process guidance only | High | `guard.py setup` locks tracked files; `begin-step` unlocks only validated step files |
-| Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred review tool, not a faked approval |
+| Parallel exploration discipline | Claude can fan out Codex helpers from the plugin side | Serial exploration guidance only | Medium | Codex conductor now requires foreground-parallel exploration before planning |
+| Plan attack before approval | Claude plugin can pressure-test Codex work during orchestration | No Codex-side equivalent | High | Codex writes the draft plan, headless Claude attacks it via `attack_plan`, Codex keeps or rejects findings, then Orbit reviews the revised draft |
+| Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred approval tool after the Claude attack pass |
 | Step ownership | Hook-time ownership routing | None | High | One writable step at a time through `begin-step` / `complete-step`; preserves intent without per-tool interception |
 | Execution routing | Claude planner / operator chooses who implements | Planner-authored `executor` field | High | Conductor-owned routing resolver now stamps `executor`, `routingReason`, and routing metadata before execution, with Codex as the default |
 | Completion gate | Hook-time result / receipt checks | `claudeVerify` described in docs only | High | `guard.py complete-step` requires non-empty result and Claude PASS verdict when `claudeVerify: true` |
@@ -100,6 +102,10 @@ blindly into the Codex side:
 - Mandatory “Claude dispatches Codex for co-exploration” logic.
   That is a Claude-side orchestration rule, not a Codex-native requirement when
   Codex is the primary agent.
+
+- Blindly accepting Claude's planning suggestions.
+  In the inverse model, Claude attacks the plan, but Codex remains the
+  conductor and decides which findings are relevant enough to change the plan.
 
 - Progress splitting into immutable `plan.json` plus mutable `progress.json`
   by default.
@@ -174,6 +180,17 @@ Updated:
 
 so the documented Codex workflow matches the implemented runtime path.
 
+### Workflow model alignment
+
+Updated the Codex-side instructions so the intended asymmetric model is now:
+
+- exploration runs in parallel by default
+- Codex writes the draft plan
+- Claude attacks the plan through `claude-bridge`
+- Codex evaluates those findings and updates the draft only when relevant
+- Orbit reviews the revised draft
+- all brainstorming runs through live Claude
+
 ### Conductor-owned routing
 
 Added `codex-skills/lbyl-conductor/scripts/resolve_executor.py` and wired
@@ -192,10 +209,11 @@ Added `tests/test_codex_guard.py` covering:
 - successful completion relocking and step status update
 
 Added `tests/test_claude_bridge_session_manager.py` and updated
-`claude-bridge/session_manager.py` so `verify_step` now launches Claude in
-`--bare` mode without a plugin dir. That preserves the intent of independent
-verification while preventing the upstream Claude plugin hooks from mutating
-Codex plan state during a review pass.
+`claude-bridge/session_manager.py` so bridge calls now use authenticated
+non-`--bare` Claude with `disableAllHooks: true`, `--setting-sources
+project,local`, and the local `look-before-you-leap` plugin dir. That
+preserves Claude skill availability while preventing the upstream plugin hook
+layer from mutating Codex plan state during a review pass.
 
 ## 6. Remaining Gaps
 
@@ -205,9 +223,7 @@ These areas are still real but intentionally not forced into fake parity:
 - signed approval / bypass receipts on the Codex side
 - sub-agent prompt injection guarantees
 - Codex-side equivalents for every upstream hook
-- headless Claude authentication is still an external prerequisite for
-  `claude-bridge verify_step`; the repo can now fail coherently, but it cannot
-  authenticate Claude for the user
+- richer bridge-side curation of which Claude skills are available per flow
 
 Those remain future work if they become worth the added complexity in Codex.
 

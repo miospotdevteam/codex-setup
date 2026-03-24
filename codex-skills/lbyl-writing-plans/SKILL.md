@@ -1,6 +1,6 @@
 ---
 name: lbyl-writing-plans
-description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces both plan.json (execution source of truth) and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
+description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces both plan.json (execution source of truth) and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Codex writes the draft plan, Claude attacks it, then Codex decides what to change before Orbit review. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
 ---
 
 # Writing Plans
@@ -247,7 +247,23 @@ Groups should have 3-8 files each. If a group exceeds 8, split it.
 has been evaluated. If you skip this, large steps will fail mid-execution
 when context runs out.
 
-### 5. Present for review via Orbit
+### 5. Run a Claude attack pass on the draft
+
+After saving both files to disk, attack the draft before the user sees it:
+
+1. Call `claude-bridge` `attack_plan` with the current cwd, the plan name,
+   the `plan.json` path, the `masterPlan.md` path, and any concise summary of
+   the user goal or constraints that Claude should pressure-test.
+2. Read the returned findings as adversarial review, not as automatic truth.
+3. Update `plan.json` and `masterPlan.md` only for findings that are actually
+   relevant to the repo, user request, and discovery evidence.
+4. If Claude proposes irrelevant, speculative, or already-covered changes,
+   reject them and keep the draft as-is.
+
+If `claude-bridge` is unavailable, stop and surface the setup issue instead of
+skipping the attack pass silently.
+
+### 6. Present for review via Orbit
 
 After saving both files to disk, present masterPlan.md to the user for
 interactive review using the Orbit MCP:
@@ -266,10 +282,10 @@ the setup issue instead of silently skipping review.
 
 `orbit_await_review` returns JSON with `status` and `threads`.
 
-- **`approved`, no threads** → proceed to step 6.
+- **`approved`, no threads** → proceed to step 7.
 - **`approved`, with threads** → read each thread, reply with
   `orbit_reply` acknowledging the feedback, resolve threads, then proceed
-  to step 6.
+  to step 7.
 - **`changes_requested`** → read all threads. Update both masterPlan.md
   and plan.json to address the feedback. Reply to each thread explaining
   what changed. Resolve threads. Call `orbit_await_review` again for
@@ -288,7 +304,7 @@ When the review is approved, update `plan.json.review` before execution:
 }
 ```
 
-### 6. Summarize and proceed (post-approval)
+### 7. Summarize and proceed (post-approval)
 
 After the plan is approved via Orbit:
 
@@ -343,6 +359,9 @@ This skill must NOT:
   for review via Orbit MCP before execution unless the user explicitly says
   to skip review, in which case `plan.json.review.status` must be set to
   `skipped` with a concrete `skipReason`.
+- **Skip the Claude attack pass** — non-trivial draft plans must be attacked
+  through `claude-bridge` before Orbit review unless the user explicitly
+  skips the structured planning flow.
 - **Allow a hand-written substitute plan** — if `lbyl-writing-plans` did not
   generate the files, the plan is invalid and must not be executed.
 - **Pretend `masterPlan.md` is the runtime tracker** — execution state

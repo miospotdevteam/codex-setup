@@ -17,6 +17,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+HOOKS_DISABLED_SETTINGS = {"disableAllHooks": True}
+LIVE_SETTING_SOURCES = "project,local"
+
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat()
@@ -74,6 +77,8 @@ def main() -> int:
     prompt = prompt_file.read_text(encoding="utf-8")
 
     cmd = [args.claude_command, "-n", args.title]
+    cmd.extend(["--setting-sources", LIVE_SETTING_SOURCES])
+    cmd.extend(["--settings", json.dumps(HOOKS_DISABLED_SETTINGS)])
     if args.plugin_dir:
         cmd.extend(["--plugin-dir", args.plugin_dir])
     cmd.append(prompt)

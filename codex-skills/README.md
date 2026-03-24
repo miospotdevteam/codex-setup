@@ -39,6 +39,7 @@ review tools are available at startup in future Codex sessions.
 The same installer also configures `claude-bridge` globally for Codex:
 
 - live Claude brainstorming in VS Code
+- headless Claude plan attack for Codex-written draft plans
 - headless Claude frontend implementation for materially visual steps
 - hard Claude verification before `claudeVerify` steps are marked done
 
@@ -91,19 +92,21 @@ Ask for the skills explicitly:
   skill text, local `AGENTS.md`, on-disk plans, and Orbit-backed MCP review
   tooling.
 - Claude is still part of the default workflow through `claude-bridge`:
-  live brainstorming, Claude-routed visual frontend steps, and the hard
-  verification gate.
+  live brainstorming, headless plan attack, Claude-routed visual frontend
+  steps, and the hard verification gate.
 - When installed, `codex-guard` is the hard-default write gate on the Codex
   side for validated step execution.
 - The conductor assumes the companion skills are active for coding work.
 - Persistent plans use `plan.json` as execution state and `masterPlan.md` as
   the frozen Orbit-reviewed proposal.
+- Exploration is expected to run in parallel before planning.
 - Plan steps now separate `skill` from `executor`, and default to
   `claudeVerify: true`.
 - Dep maps, when used, are configured from `.codex/lbyl-deps.json`.
-- In the default Codex workflow for this repo, new plan artifacts go through
-  `orbit_await_review` before execution proceeds unless the user explicitly
-  skips that review.
+- In the default Codex workflow for this repo, Codex writes the draft plan,
+  Claude attacks it, Codex updates the draft only for relevant findings, and
+  then the revised plan goes through `orbit_await_review` unless the user
+  explicitly skips that review.
 - When the skill pack itself causes a workflow error in another session, log
   it back to this repo under `usage-errors/`, preferably via
   `bash ~/Projects/codex-setup/scripts/log-usage-error.sh "short title"`.

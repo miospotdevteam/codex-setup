@@ -1,6 +1,6 @@
 ---
 name: lbyl-brainstorming
-description: "Use when a task has unresolved design ambiguity with materially different approaches. Best for new features, components, workflows, or behavior changes where multiple plausible UX, API, data-model, or architecture choices exist and the right answer is not already implied by user direction or repo patterns. Do NOT use for implementation planning (use writing-plans), debugging, bug fixes, refactoring, migrations, audits, or executing an already-written plan."
+description: "Use when a task has unresolved design ambiguity with materially different approaches. Best for new features, components, workflows, or behavior changes where multiple plausible UX, API, data-model, or architecture choices exist and the right answer is not already implied by user direction or repo patterns. In this repo, all approved brainstorming is routed to Claude through claude-bridge rather than a Codex-only brainstorm loop. Do NOT use for implementation planning (use writing-plans), debugging, bug fixes, refactoring, migrations, audits, or executing an already-written plan."
 ---
 
 # Brainstorming
@@ -55,8 +55,8 @@ reads and note the greenfield context — proceed directly to questions.
 
 ### 2. Route the conversation to live Claude
 
-In this repo's workflow, brainstorming is handled by the live Claude session,
-not by a Codex-only Q&A loop.
+In this repo's workflow, brainstorming is always handled by the live Claude
+session, not by a Codex-only Q&A loop.
 
 If the `claude-bridge` MCP server is available:
 

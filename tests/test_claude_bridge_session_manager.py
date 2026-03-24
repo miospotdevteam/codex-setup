@@ -58,7 +58,7 @@ class SessionManagerCommandTests(unittest.TestCase):
         if hasattr(self, "temp_dir"):
             self.temp_dir.cleanup()
 
-    def test_verification_uses_read_only_tools_without_plugin_dir(self) -> None:
+    def test_verification_uses_read_only_tools_with_plugin_and_hooks_disabled(self) -> None:
         manager = self.make_manager()
         captured: dict[str, object] = {}
 
@@ -89,14 +89,67 @@ class SessionManagerCommandTests(unittest.TestCase):
 
         cmd = captured["cmd"]
         assert isinstance(cmd, list)
-        self.assertIn("--disable-slash-commands", cmd)
-        self.assertNotIn("--plugin-dir", cmd)
+        self.assertNotIn("--bare", cmd)
+        self.assertNotIn("--disable-slash-commands", cmd)
+        self.assertIn("--plugin-dir", cmd)
+        self.assertEqual(cmd[cmd.index("--plugin-dir") + 1], "/tmp/plugin")
+        self.assertIn("--setting-sources", cmd)
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "project,local")
+        self.assertIn("--settings", cmd)
+        self.assertEqual(
+            json.loads(cmd[cmd.index("--settings") + 1]),
+            {"disableAllHooks": True},
+        )
         self.assertIn("--allowedTools", cmd)
         allowed = cmd[cmd.index("--allowedTools") + 1]
         self.assertIn("Read", allowed)
         self.assertIn("Bash(git status:*)", allowed)
-        self.assertNotIn("--bare", cmd)
+        self.assertNotIn("LS", allowed)
         self.assertEqual(result["status"], "PASS")
+
+    def test_attack_plan_uses_read_only_tools_with_plugin_and_hooks_disabled(self) -> None:
+        manager = self.make_manager()
+        captured: dict[str, object] = {}
+
+        def fake_popen(cmd, **kwargs):
+            captured["cmd"] = cmd
+            return FakeProcess(
+                {"verdict": "REVISE", "summary": "tighten step order", "findings": []},
+                use_structured_output=True,
+            )
+
+        args = {
+            "cwd": str(REPO_ROOT),
+            "planName": "demo-plan",
+            "planPath": str(REPO_ROOT / ".temp" / "plan-mode" / "active" / "demo-plan" / "plan.json"),
+            "masterPlanPath": str(REPO_ROOT / ".temp" / "plan-mode" / "active" / "demo-plan" / "masterPlan.md"),
+            "userGoal": "Ship the feature safely",
+            "discoverySummary": "Relevant consumers listed",
+            "pluginDir": "/tmp/should-not-be-used",
+        }
+
+        with (
+            mock.patch.object(manager, "resolve_claude_command", return_value="/usr/bin/claude"),
+            mock.patch.object(manager, "resolve_plugin_dir", return_value="/tmp/plugin"),
+            mock.patch.object(session_manager.subprocess, "Popen", side_effect=fake_popen),
+        ):
+            result = manager.run_plan_attack(args)
+
+        cmd = captured["cmd"]
+        assert isinstance(cmd, list)
+        self.assertNotIn("--bare", cmd)
+        self.assertNotIn("--disable-slash-commands", cmd)
+        self.assertIn("--plugin-dir", cmd)
+        self.assertEqual(cmd[cmd.index("--plugin-dir") + 1], "/tmp/plugin")
+        self.assertIn("--setting-sources", cmd)
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "project,local")
+        self.assertIn("--settings", cmd)
+        self.assertEqual(
+            json.loads(cmd[cmd.index("--settings") + 1]),
+            {"disableAllHooks": True},
+        )
+        self.assertIn("--allowedTools", cmd)
+        self.assertEqual(result["verdict"], "REVISE")
 
     def test_frontend_implementation_keeps_plugin_dir_and_skips_bare_mode(self) -> None:
         manager = self.make_manager()
@@ -140,6 +193,13 @@ class SessionManagerCommandTests(unittest.TestCase):
         self.assertNotIn("--bare", cmd)
         self.assertIn("--plugin-dir", cmd)
         self.assertEqual(cmd[cmd.index("--plugin-dir") + 1], "/tmp/plugin")
+        self.assertIn("--setting-sources", cmd)
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "project,local")
+        self.assertIn("--settings", cmd)
+        self.assertEqual(
+            json.loads(cmd[cmd.index("--settings") + 1]),
+            {"disableAllHooks": True},
+        )
         self.assertEqual(result["summary"], "implemented")
 
     def test_verification_falls_back_to_candidate_payload_when_final_result_is_polluted(self) -> None:

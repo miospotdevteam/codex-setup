@@ -52,7 +52,7 @@ Look for installed skills that match these needs:
 
 If no specialized skill exists, use the checklists and guides in `references/`.
 
-### Brainstorming gate
+### Brainstorming routing
 
 Before invoking `lbyl-brainstorming`, check all 3 conditions:
 
@@ -62,7 +62,9 @@ Before invoking `lbyl-brainstorming`, check all 3 conditions:
 3. The correct choice is not already implied by user direction or
    established repo patterns
 
-If all 3 are true, use `lbyl-brainstorming`.
+If all 3 are true, use `lbyl-brainstorming` and route the session to Claude
+through `claude-bridge`. In this repo, brainstorming is never a Codex-only
+fallback.
 
 If any condition is false, skip brainstorming and continue with discovery,
 planning, or execution as appropriate.
@@ -115,7 +117,13 @@ saves five minutes fixing.
 
 Follow **engineering-discipline Phase 1** (Orient Before You Touch Anything).
 
-Additionally, read `references/exploration-protocol.md` and answer all 8
+Additionally, run exploration in **foreground parallel** by default. Split the
+work across at least two lanes whenever the task is non-trivial: scope and
+consumers in one lane, sibling patterns/conventions/tests in another. If the
+task is too small for multiple agents, still parallelize file reads and search
+commands so discovery happens concurrently instead of serially.
+
+Then read `references/exploration-protocol.md` and answer all 8
 questions. Exit criterion: confidence is Medium or higher. If Low, keep
 exploring.
 
@@ -206,6 +214,25 @@ Initialize the plan directory if needed:
 ```bash
 bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 ```
+
+### Claude attacks the draft plan before Orbit
+
+After `lbyl-writing-plans` writes the draft `plan.json` and `masterPlan.md`,
+run a Claude plan-attack pass before Orbit review:
+
+1. Call `claude-bridge` `attack_plan` with the current cwd, plan name,
+   `plan.json` path, `masterPlan.md` path, and a concise summary of the user
+   goal or constraints.
+2. Read Claude's findings as an adversarial review of scope, sequencing,
+   discovery quality, and verification coverage.
+3. Update the draft plan only when the findings are relevant. Do not accept
+   speculative or clearly repo-incompatible suggestions just because Claude
+   proposed them.
+4. Keep Codex as the decision-maker. Claude attacks the draft; Codex owns the
+   final judgment and the resulting edits.
+
+If `claude-bridge` is unavailable, stop and surface the setup failure instead
+of silently skipping the attack pass.
 
 ### Plan review via Orbit
 
@@ -298,6 +325,7 @@ Execution rules:
   follow-up prompt. Claude edits the same working tree directly.
 - Brainstorming uses the live Claude path via `claude-bridge`
   `brainstorm_start` and `brainstorm_status`, not the headless worker path.
+- Plan attack uses the headless Claude `attack_plan` tool before Orbit review.
 
 The planner may provide `routingHint`, but the conductor resolves the final
 executor before execution. The default bias is Codex. Route to Claude only
