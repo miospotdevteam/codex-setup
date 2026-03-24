@@ -107,11 +107,10 @@ blindly into the Codex side:
   In the inverse model, Claude attacks the plan, but Codex remains the
   conductor and decides which findings are relevant enough to change the plan.
 
-- Progress splitting into immutable `plan.json` plus mutable `progress.json`
-  by default.
-  That shape is useful for the Claude hook system, but the Codex repo already
-  standardized on a single mutable `plan.json`. Preserving intent matters more
-  than forcing the same file topology.
+- Blindly preserving the old Codex-side single mutable `plan.json` divergence.
+  The upstream intent is that plan definition stays stable while mutable
+  execution state lives separately. Codex should mirror that behavior with its
+  own helpers instead of keeping the earlier incorrect simplification.
 
 ## 4. Concrete Plan For Missing Or Incorrect Pieces
 

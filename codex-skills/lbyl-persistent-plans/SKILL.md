@@ -18,20 +18,22 @@ that engineering-discipline provides.
 
 ## Dual-File Architecture
 
-Every plan consists of two files:
+Every plan consists of three files:
 
-- **`plan.json`** — Source of truth for execution. Steps, progress, state,
-  inline sub-plans. Updated by Codex via `plan_utils.py`.
-  Agent-facing. This is what you read to know where you are. Updated
-  constantly during execution.
+- **`plan.json`** — Immutable plan definition. Steps, files, acceptance
+  criteria, routing, and inline sub-plans live here.
+- **`progress.json`** — Mutable execution state. Step statuses, progress item
+  statuses, results, completed summaries, and deviations live here. Created
+  by `plan_utils.py` on first mutation.
 - **`masterPlan.md`** — Proposal document for user review via Orbit.
   Summarizes what, why, critical decisions, warnings, risk areas.
   Human-facing. **Write-once**: frozen after Orbit approval, never updated
   during execution.
 
-Codex and the helper scripts read `plan.json`. You update `plan.json`.
-The user reviews `masterPlan.md` once during planning. After approval, only plan.json
-changes — masterPlan.md is a stable record of what was agreed upon.
+Codex and the helper scripts read merged plan state from `plan.json` +
+`progress.json`. The user reviews `masterPlan.md` once during planning.
+After approval, runtime mutations go to `progress.json` while non-material
+definition follow-through may still update `plan.json`.
 That means execution should keep moving after approval. Non-material
 follow-through belongs in plan.json; only material scope or tradeoff
 changes warrant another Orbit review.
@@ -44,11 +46,13 @@ changes warrant another Orbit review.
 
 Codex CLI will auto-compact your context without warning. You cannot
 prevent this. You cannot predict exactly when it will happen. Therefore,
-your plan.json on disk must ALWAYS reflect your current progress.
+your on-disk plan state (`plan.json` + `progress.json`) must ALWAYS reflect
+your current progress.
 
-**Treat every write to plan.json as a save point.** If auto-compaction
-happens right now, would your plan.json let you resume without
-re-discovering anything? If the answer is no, update plan.json immediately.
+**Treat every write to plan state as a save point.** If auto-compaction
+happens right now, would `plan.json` + `progress.json` let you resume
+without re-discovering anything? If the answer is no, update the plan
+state immediately.
 
 After ANY compaction (including auto-compaction), your FIRST action is to
 read the active plan from disk. Do not wait for the user to say "continue".
@@ -86,7 +90,7 @@ This skill must NOT:
   explicitly document what remains instead.
 
 **Autonomy limits**: creating plans, writing to plan files, updating
-progress, and adding non-material post-approval follow-through to plan.json
+progress, and adding non-material post-approval follow-through to the plan definition
 are autonomous. Deleting plans, skipping blocked steps, and materially
 deviating from the approved plan require user confirmation.
 
@@ -105,7 +109,8 @@ plans go in `active/`; completed plans are automatically moved to
 .temp/plan-mode/
 ├── active/                       # Plans currently in progress
 │   └── <plan-name>/              # kebab-case (e.g., "migrate-auth-to-v2")
-│       ├── plan.json             # Execution source of truth
+│       ├── plan.json             # Immutable plan definition
+│       ├── progress.json         # Mutable execution state
 │       ├── masterPlan.md         # User-facing proposal document
 │       └── discovery.md          # Exploration findings (optional)
 ├── completed/                    # Finished plans (moved here automatically)
@@ -125,7 +130,7 @@ bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 
 ---
 
-## Updating plan.json
+## Updating Plan State
 
 Use `plan_utils.py` via the Bash tool. This is more reliable than Edit-based
 markdown checkbox toggling:
@@ -156,6 +161,9 @@ python3 "$PLAN_UTILS" status "$PLAN_JSON"
 # Get next step
 python3 "$PLAN_UTILS" next-step "$PLAN_JSON"
 ```
+
+Mutation commands write to `progress.json`, not back into mutable fields in
+`plan.json`.
 
 ---
 
@@ -226,7 +234,7 @@ Orbit-review sequence before execution began.
 
 ### The Checkpoint Rule (THE #1 RULE OF EXECUTION)
 
-**After every 2-3 code file edits, you MUST update plan.json on disk.**
+**After every 2-3 code file edits, you MUST update plan state on disk.**
 No hook will reliably save you from forgetting this in Codex CLI. Treat it
 as a manual save point you never skip.
 
@@ -240,12 +248,12 @@ is stale, your next context window starts from scratch. Every plan update
 is insurance against lost work.
 
 **Serialize plan updates.** Never run multiple `plan_utils.py` writes against
-the same `plan.json` in parallel. The file is the single source of truth, so
-update it sequentially.
+the same plan directory in parallel. `progress.json` is the mutable source of
+truth, so update it sequentially.
 
 **The Compaction Test**: *"If compaction fired RIGHT NOW, could someone
-resume from plan.json alone?"* Ask this after every code edit. If the
-answer is no, update plan.json BEFORE your next edit.
+resume from plan.json + progress.json alone?"* Ask this after every code
+edit. If the answer is no, update the plan state BEFORE your next edit.
 
 This is a loop. Follow it mechanically.
 

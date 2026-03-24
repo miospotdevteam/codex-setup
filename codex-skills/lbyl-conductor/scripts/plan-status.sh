@@ -60,9 +60,10 @@ show_plan_json() {
   echo "----------------------------------------"
 
   python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    plan = json.load(f)
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[2]))
+import plan_utils
+plan = plan_utils.read_plan(sys.argv[1])
 counts = {'pending': 0, 'in_progress': 0, 'done': 0, 'blocked': 0}
 for s in plan.get('steps', []):
     st = s.get('status', 'pending')
@@ -78,7 +79,7 @@ for s in plan.get('steps', []):
         for g in sp['groups']:
             gst = g.get('status', 'pending')
             print(f'      sub-group: {g[\"name\"]} ({gst})')
-" "$plan_json"
+" "$plan_json" "$PLAN_DIR/scripts/plan_utils.py"
   echo ""
 }
 

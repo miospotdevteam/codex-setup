@@ -45,23 +45,9 @@ if [ ! -d "$ACTIVE_DIR" ]; then
 fi
 
 # --- Try plan.json first ---
-# Find most recently modified plan.json in active/
-latest_json=""
-
-# Try macOS stat first
-if command -v stat &>/dev/null; then
-  latest_json=$(find "$ACTIVE_DIR" -name "plan.json" -type f -exec stat -f '%m %N' {} \; 2>/dev/null | sort -rn | head -1 | awk '{print $2}')
-fi
-
-# Fallback: try GNU find with -printf (Linux)
-if [ -z "$latest_json" ]; then
-  latest_json=$(find "$ACTIVE_DIR" -name "plan.json" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-) || true
-fi
-
-# Last resort: just pick the first one
-if [ -z "$latest_json" ]; then
-  latest_json=$(find "$ACTIVE_DIR" -name "plan.json" -type f 2>/dev/null | head -1)
-fi
+project_root="$(dirname "$(dirname "$PLAN_DIR")")"
+plan_utils="${PLAN_DIR}/scripts/plan_utils.py"
+latest_json="$(python3 "$plan_utils" find-active "$project_root" 2>/dev/null || true)"
 
 if [ -n "$latest_json" ]; then
   plan_name="$(basename "$(dirname "$latest_json")")"
@@ -74,9 +60,10 @@ if [ -n "$latest_json" ]; then
   echo ""
 
   python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    plan = json.load(f)
+import os, sys
+sys.path.insert(0, os.path.dirname(sys.argv[2]))
+import plan_utils
+plan = plan_utils.read_plan(sys.argv[1])
 
 # Context
 print('--- Context ---')
@@ -124,7 +111,7 @@ if blocked:
     for s in blocked:
         print(f'  Step {s[\"id\"]}: {s[\"title\"]}')
     print()
-" "$latest_json"
+" "$latest_json" "$plan_utils"
 
   echo "To resume, tell Codex: 'continue with the plan'"
   exit 0

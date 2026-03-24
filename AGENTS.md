@@ -40,6 +40,7 @@ Upstream skills also shipped from this repo:
 - The installer also writes a managed machine-global default block to `~/.codex/AGENTS.md`, so Codex sessions from anywhere on this machine inherit that default unless a nearer project `AGENTS.md` overrides it.
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+- During execution, treat `plan.json` as the definition and `progress.json` as the mutable runtime tracker.
 - For non-trivial work, Codex writes the draft plan, Claude attacks it through `claude-bridge`, Codex evaluates the findings and updates the draft only when the findings are relevant, then Orbit reviews the revised plan.
 - If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.

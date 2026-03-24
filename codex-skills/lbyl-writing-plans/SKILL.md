@@ -1,6 +1,6 @@
 ---
 name: lbyl-writing-plans
-description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces both plan.json (execution source of truth) and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Codex writes the draft plan, Claude attacks it, then Codex decides what to change before Orbit review. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
+description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces plan.json (immutable plan definition), progress.json (mutable execution state created on first mutation), and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Codex writes the draft plan, Claude attacks it, then Codex decides what to change before Orbit review. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
 ---
 
 # Writing Plans
@@ -70,10 +70,10 @@ not planning):
 
 Produce **both** files in `.temp/plan-mode/active/<plan-name>/`:
 
-#### plan.json — execution source of truth
+#### plan.json — immutable plan definition
 
-Use the schema from `references/plan-schema.md`. This file is what Codex
-reads and updates during execution. Include:
+Use the schema from `references/plan-schema.md`. Codex reads this file as the
+definition and merges it with `progress.json` during execution. Include:
 
 - All discovery findings in the `discovery` object
 - A top-level `review` object initialized for Orbit gating
@@ -102,13 +102,14 @@ fail the Codex-side execution gate when the guard is installed.
 
 This is the document the user reviews via Orbit. It communicates **intent**,
 not execution state. **It is frozen after Orbit approval** — never updated
-during execution. All runtime state lives in plan.json.
+during execution. Runtime status, results, summaries, and deviations live in
+`progress.json`.
 
 This freeze does **not** mean execution should stop for another approval
 every time adjacent follow-through is discovered. After approval, keep
 executing through the approved objective. If you discover non-material
-follow-through that is clearly in service of the same objective, update
-only plan.json and continue. Reserve a new Orbit review for material scope
+follow-through that is clearly in service of the same objective, update the
+plan definition in `plan.json` and continue. Reserve a new Orbit review for material scope
 or tradeoff changes (see "Updating an approved plan" below).
 
 Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
@@ -188,6 +189,11 @@ Default to `false` for simple steps.
   specific what-to-do with exact file paths and acceptance criteria. Plans
   describe *what* to build; the executing engineer writes the code.
 - **Exact file paths** — every step lists files in the `files` array
+- **Include repo-mandated companion docs up front** — if AGENTS, CLAUDE.md,
+  or repo-local conventions require inventory or structure docs (for example
+  `.claude/project-structure/*`) to change alongside code, include those
+  files in the step's `files` array and progress items instead of letting
+  them appear later as surprise scope.
 - **Exact commands with expected outcome** — in description or acceptance
   criteria, include the command and expected result
 - **Self-contained** — the plan.json is the ONLY thing the executing

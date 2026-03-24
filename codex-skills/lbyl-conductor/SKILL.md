@@ -204,7 +204,8 @@ continue to execution.
 
 The skill consumes your discovery.md, identifies applicable discipline
 checklists, structures TDD-granularity steps, and writes both:
-- `plan.json` — execution source of truth (Codex reads and updates this during execution)
+- `plan.json` — immutable execution definition
+- `progress.json` — mutable execution state created on first mutation
 - `masterPlan.md` — user-facing proposal for Orbit review (write-once, frozen after approval)
 
 Follow **persistent-plans Phase 1** (Create the Plan) for the structural
@@ -256,7 +257,7 @@ Record the Orbit result back into `plan.json.review` before execution:
 
 After approval, the default is to **continue through implementation**. Do
 not stop for another approval just because execution uncovers adjacent
-in-scope follow-through. Update plan.json and keep going unless the newly
+in-scope follow-through. Update the plan definition and keep going unless the newly
 discovered work is a material scope or tradeoff change.
 
 If Orbit MCP tools are unavailable or fail unexpectedly, treat that as a
@@ -476,8 +477,9 @@ helper scripts, and Orbit-backed review tooling.
 
 - Treat plan creation, Orbit review, plan checkpoints, and verification as
   hard requirements even when nothing blocks you automatically.
-- `plan.json` is the execution source of truth. `masterPlan.md` is the
-  frozen user-facing proposal reviewed through Orbit.
+- `plan.json` is the execution definition. `progress.json` is the mutable
+  runtime state. `masterPlan.md` is the frozen user-facing proposal reviewed
+  through Orbit.
 - When dispatching sub-agents, include the active plan path and any shared
   discovery path in the prompt explicitly.
 - Orbit review should use `orbit_await_review` when available; do not fall
@@ -530,6 +532,6 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 - `scripts/init-plan-dir.sh` — initialize `.temp/plan-mode/` directory
 - `scripts/plan-status.sh` — show status of all active plans
 - `scripts/resume.sh` — find what to resume after compaction
-- `scripts/plan_utils.py` — read/update plan.json and finalize completed plans from Codex sessions and helper scripts
+- `scripts/plan_utils.py` — read merged plan state, write progress.json mutations, and finalize completed plans from Codex sessions and helper scripts
 - `scripts/deps-query.py` — query dependency maps for consumers and dependencies
 - `scripts/deps-generate.py` — generate or regenerate dependency maps

@@ -196,6 +196,7 @@ For coding work, the expected default is:
 
 - explore first, in parallel
 - write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
+- let `plan_utils.py` write mutable execution state to `progress.json` during execution
 - have Codex write the draft plan, then run a Claude plan-attack pass, then let Codex accept only the relevant findings before Orbit review
 - if `codex-guard` is installed, use `validate-plan`, `begin-step`, `checkpoint`, and `complete-step` during execution
 - update the plan every 2-3 file edits

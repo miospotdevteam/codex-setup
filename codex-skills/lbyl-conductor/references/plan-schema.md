@@ -1,13 +1,14 @@
 # plan.json Schema
 
-The execution source of truth for every plan. Codex reads and updates this
-file to track progress. `masterPlan.md` is the human-facing presentation
-document — it does NOT contain execution state.
+The immutable plan definition for every plan. Codex reads this file and
+merges it with `progress.json` to track runtime state. `masterPlan.md` is the
+human-facing presentation document — it does NOT contain execution state.
 
 ## Location
 
-```
+```text
 .temp/plan-mode/active/<plan-name>/plan.json
+.temp/plan-mode/active/<plan-name>/progress.json
 ```
 
 ## Full Schema
@@ -87,9 +88,29 @@ document — it does NOT contain execution state.
       "result": null
     }
   ],
-  "blocked": [],
-  "completedSummary": [],
-  "deviations": []
+  "blocked": []
+}
+```
+
+## progress.json Schema
+
+```json
+{
+  "steps": {
+    "1": {
+      "status": "in_progress",
+      "result": "Implemented and verified",
+      "progress": [
+        {"status": "done"},
+        {"status": "pending"}
+      ],
+      "groups": {
+        "0": {"status": "done", "notes": "Finished first sweep"}
+      }
+    }
+  },
+  "completedSummary": ["Step 1: implemented the API change"],
+  "deviations": ["Used shared helper instead of duplicating logic"]
 }
 ```
 
@@ -109,8 +130,9 @@ document — it does NOT contain execution state.
 | `discovery` | object | yes | All 8 exploration sections |
 | `steps` | Step[] | yes | Ordered list of execution steps |
 | `blocked` | string[] | yes | Blocked step descriptions (empty if none) |
-| `completedSummary` | string[] | yes | Running log of completed steps |
-| `deviations` | string[] | yes | Where execution diverged from the approved baseline in masterPlan.md |
+
+**Note:** `completedSummary` and `deviations` are mutable fields that live in
+`progress.json`.
 
 ### Review fields
 
@@ -127,7 +149,7 @@ document — it does NOT contain execution state.
 |---|---|---|---|
 | `id` | number | yes | Sequential step number (1-based) |
 | `title` | string | yes | Step title |
-| `status` | string | yes | One of: `pending`, `in_progress`, `done`, `blocked` |
+| `status` | string | yes | **Mutable** — initial: `pending`. Runtime value lives in `progress.json`. |
 | `skill` | string | yes | Skill to invoke, or `"none"` |
 | `routingHint` | string | no | Optional planner hint: `auto`, `codex`, `claude`, or `visual` |
 | `executor` | string | yes | Conductor-resolved implementation owner: `codex` or `claude` |
@@ -141,14 +163,14 @@ document — it does NOT contain execution state.
 | `acceptanceCriteria` | string | yes | How to know the step is done |
 | `progress` | Progress[] | yes | Sub-task checklist (empty array for simple steps) |
 | `subPlan` | SubPlan? | no | Inline sub-plan for large steps (null if none) |
-| `result` | string? | no | Filled after completion (null before) |
+| `result` | string? | no | **Mutable** — initial: null. Runtime value lives in `progress.json`. |
 
 ### Progress item fields
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `task` | string | yes | Sub-task description |
-| `status` | string | yes | One of: `pending`, `in_progress`, `done` |
+| `status` | string | yes | **Mutable** — runtime value lives in `progress.json`. One of: `pending`, `in_progress`, `done` |
 | `files` | string[] | no | Files involved in this sub-task |
 
 ### SubPlan fields
@@ -163,8 +185,8 @@ document — it does NOT contain execution state.
 |---|---|---|---|
 | `name` | string | yes | Logical cluster name |
 | `files` | string[] | yes | Files in this group |
-| `status` | string | yes | One of: `pending`, `in_progress`, `done` |
-| `notes` | string? | no | Execution notes (null before, filled during) |
+| `status` | string | yes | **Mutable** — runtime value lives in `progress.json`. One of: `pending`, `in_progress`, `done` |
+| `notes` | string? | no | **Mutable** — runtime value lives in `progress.json`. Execution notes (null before, filled during) |
 
 ## Status Values
 
@@ -228,11 +250,11 @@ installed:
 - `claudeVerify` determines whether a recorded Claude PASS verdict is required
   before the guard will allow completion
 
-## Updating plan.json
+## Updating Runtime State
 
-Codex updates plan.json using the Bash tool with `python3` one-liners that
-call `plan_utils.py`. This is more reliable than Edit-based markdown
-checkbox toggling:
+Codex updates runtime state using `plan_utils.py`. Mutation commands write to
+`progress.json`; `plan.json` remains the definition unless the plan itself
+needs a non-material definition update.
 
 ```bash
 # Mark step 3 as in_progress
@@ -265,13 +287,13 @@ Its purpose:
 - Serves as a stable record of what was agreed upon
 
 All runtime state (progress, results, completed summaries, deviations)
-lives exclusively in plan.json.
+lives exclusively in `progress.json`.
 
-After approval, plan.json may also absorb **non-material follow-through**
+After approval, `plan.json` may still absorb **non-material definition follow-through**
 that is clearly in service of the same approved objective. Examples:
 mirrored fixes, adjacent consistency updates, extra verification, and
 small cleanup/docs/tests needed to finish the approved work correctly.
 If the scope, risk, or tradeoff changes materially, do not silently keep
-stretching plan.json — revise the plan and get a fresh Orbit review.
+stretching the plan definition — revise the plan and get a fresh Orbit review.
 
 See `references/master-plan-format.md` for the template.

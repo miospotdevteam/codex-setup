@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import shutil
 import stat
@@ -15,6 +16,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GUARD = REPO_ROOT / "codex-guard" / "guard.py"
+PLAN_UTILS_PATH = REPO_ROOT / "codex-skills" / "lbyl-conductor" / "scripts" / "plan_utils.py"
+
+spec = importlib.util.spec_from_file_location("codex_guard_plan_utils", PLAN_UTILS_PATH)
+assert spec and spec.loader
+plan_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(plan_utils)
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -119,8 +126,10 @@ class GuardCliTests(unittest.TestCase):
         )
 
     def load_plan(self) -> dict:
-        with self.active_plan().open(encoding="utf-8") as handle:
-            return json.load(handle)
+        return plan_utils.read_plan(str(self.active_plan()))
+
+    def write_progress(self, payload: dict) -> None:
+        write_json(self.active_plan().with_name("progress.json"), payload)
 
     def test_validate_plan_rejects_pending_review(self) -> None:
         self.make_plan(review_status="pending")
@@ -147,6 +156,15 @@ class GuardCliTests(unittest.TestCase):
         self.assertTrue(is_user_writable(self.root / "src" / "a.txt"))
         self.assertFalse(is_user_writable(self.root / "src" / "b.txt"))
 
+    def test_setup_resumes_in_progress_step_from_progress_json(self) -> None:
+        self.make_plan(step_status="pending")
+        self.write_progress({"steps": {"1": {"status": "in_progress"}}})
+        result = self.run_guard("setup")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Resumed step 1", result.stdout)
+        self.assertTrue(is_user_writable(self.root / "src" / "a.txt"))
+        self.assertFalse(is_user_writable(self.root / "src" / "b.txt"))
+
     def test_begin_step_requires_validation(self) -> None:
         self.make_plan()
         result = self.run_guard("begin-step", "1")
@@ -158,9 +176,16 @@ class GuardCliTests(unittest.TestCase):
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
         self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
 
-        plan = self.load_plan()
-        plan["steps"][0]["result"] = "Implemented, but not verified."
-        write_json(self.active_plan(), plan)
+        self.write_progress(
+            {
+                "steps": {
+                    "1": {
+                        "status": "in_progress",
+                        "result": "Implemented, but not verified.",
+                    }
+                }
+            }
+        )
 
         result = self.run_guard("complete-step", "1")
         self.assertNotEqual(result.returncode, 0)
@@ -172,9 +197,16 @@ class GuardCliTests(unittest.TestCase):
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
         self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
 
-        plan = self.load_plan()
-        plan["steps"][0]["result"] = "### Verdict\nClaude: PASS"
-        write_json(self.active_plan(), plan)
+        self.write_progress(
+            {
+                "steps": {
+                    "1": {
+                        "status": "in_progress",
+                        "result": "### Verdict\nClaude: PASS",
+                    }
+                }
+            }
+        )
 
         result = self.run_guard("complete-step", "1")
         self.assertEqual(result.returncode, 0, result.stderr)

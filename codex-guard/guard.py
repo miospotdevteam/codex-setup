@@ -95,7 +95,7 @@ def active_plan_paths(project_root: Path) -> list[Path]:
             for path in active_dir.glob("*/plan.json")
             if path.is_file()
         ),
-        key=lambda path: path.stat().st_mtime,
+        key=plan_state_mtime,
         reverse=True,
     )
     return plans
@@ -222,6 +222,15 @@ def ensure_pass_verdict(step: dict[str, Any]) -> None:
 def latest_mtime(paths: list[Path]) -> float:
     mtimes = [path.stat().st_mtime for path in paths if path.exists()]
     return max(mtimes) if mtimes else 0.0
+
+
+def plan_state_mtime(plan_path: Path) -> float:
+    plan_utils = load_plan_utils()
+    mtimes = [plan_path.stat().st_mtime]
+    progress_path = Path(plan_utils.progress_path_for(str(plan_path)))
+    if progress_path.exists():
+        mtimes.append(progress_path.stat().st_mtime)
+    return max(mtimes)
 
 
 def format_resume(step: dict[str, Any]) -> str:
@@ -416,7 +425,7 @@ def cmd_checkpoint(project_root: Path, args: argparse.Namespace) -> int:
     _, plan = read_plan(plan_path)
     step = find_step(plan, int(unlock_state["step_id"]))
     files = step_files(project_root, step)
-    stale = latest_mtime(files) > plan_path.stat().st_mtime
+    stale = latest_mtime(files) > plan_state_mtime(plan_path)
     append_audit(
         project_root,
         "checkpoint",
@@ -424,7 +433,7 @@ def cmd_checkpoint(project_root: Path, args: argparse.Namespace) -> int:
         stale_plan=stale,
     )
     if stale:
-        print(f"Checkpoint recorded for step {step['id']} (plan.json is older than unlocked files).")
+        print(f"Checkpoint recorded for step {step['id']} (plan state is older than unlocked files).")
     else:
         print(f"Checkpoint recorded for step {step['id']}.")
     return 0
