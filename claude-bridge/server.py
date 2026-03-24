@@ -98,6 +98,32 @@ def attack_plan_schema() -> dict[str, Any]:
     }
 
 
+def draft_plan_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "cwd",
+            "planName",
+            "discoveryPath",
+            "planPath",
+            "masterPlanPath",
+        ],
+        "properties": {
+            "cwd": {"type": "string"},
+            "planName": {"type": "string"},
+            "discoveryPath": {"type": "string"},
+            "depPartitionPath": {"type": "string"},
+            "planPath": {"type": "string"},
+            "masterPlanPath": {"type": "string"},
+            "userGoal": {"type": "string"},
+            "discoverySummary": {"type": "string"},
+            "bridgeSessionId": {"type": "string"},
+            "pluginDir": {"type": "string"}
+        },
+    }
+
+
 def verify_tool_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -147,6 +173,15 @@ TOOLS = [
             "live Claude brainstorming session launched by brainstorm_start."
         ),
         "inputSchema": brainstorm_status_schema(),
+    },
+    {
+        "name": "draft_plan",
+        "description": (
+            "Run a headless Claude planning pass that drafts plan.json and "
+            "masterPlan.md content from discovery and dep-partition context. "
+            "Claude authors the draft; Codex stays the orchestrator and reviewer."
+        ),
+        "inputSchema": draft_plan_schema(),
     },
     {
         "name": "attack_plan",
@@ -271,6 +306,8 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
                 result = manager.read_brainstorm_status(
                     arguments["sessionId"], arguments.get("tailEvents", 40)
                 )
+            elif name == "draft_plan":
+                result = manager.run_draft_plan(arguments)
             elif name == "attack_plan":
                 result = manager.run_plan_attack(arguments)
             elif name == "frontend_implement":

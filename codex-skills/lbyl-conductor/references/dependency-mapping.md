@@ -22,6 +22,23 @@ python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <file_path> --proje
 python3 ~/.codex/skills/lbyl-conductor/scripts/deps-query.py <file_path> --project-root <project_root> --json
 ```
 
+## Planning Partition Helper
+
+```bash
+python3 ~/.codex/skills/lbyl-conductor/scripts/dep_partition.py <project_root> <file_path> [<file_path> ...]
+```
+
+This helper turns dep-map data for a target set into machine-readable planning
+context:
+
+- connected target groups
+- direct target-to-target links
+- shared boundaries that make two targets unsafe to split
+- `parallelHint` / `safeParallel` / `suggestedOrder` per group
+
+Use it before writing a non-trivial plan when you want to size steps and split
+work lanes from the graph instead of from intuition.
+
 The positional `<project_root> <file_path>` form remains the canonical one in
 this repo's docs, but the script accepts `--project-root` form as a
 compatibility path for Codex sessions that build the command that way.
@@ -30,6 +47,9 @@ The output shows:
 - **DEPENDENCIES**: files this file imports
 - **DEPENDENTS**: files that import this file (across ALL modules)
 - **BLAST RADIUS**: count of direct consumers + which modules they're in
+
+The partition helper builds on the same dep maps and answers a different
+question: "which files belong in the same planning lane?"
 
 ---
 

@@ -203,7 +203,8 @@ If the plan is invalid, stop, repair the plan path first, and only then
 continue to execution.
 
 The skill consumes your discovery.md, identifies applicable discipline
-checklists, structures TDD-granularity steps, and writes both:
+checklists, builds dep-partition context when available, asks Claude to draft
+the plan, and then writes both:
 - `plan.json` — immutable execution definition
 - `progress.json` — mutable execution state created on first mutation
 - `masterPlan.md` — user-facing proposal for Orbit review (write-once, frozen after approval)
@@ -216,24 +217,27 @@ Initialize the plan directory if needed:
 bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 ```
 
-### Claude attacks the draft plan before Orbit
+### Claude drafts the plan before Orbit
 
-After `lbyl-writing-plans` writes the draft `plan.json` and `masterPlan.md`,
-run a Claude plan-attack pass before Orbit review:
+In the Codex-native workflow, writing-plans should use Claude as the primary
+plan author, not just as an attacker of a Codex-authored draft.
 
-1. Call `claude-bridge` `attack_plan` with the current cwd, plan name,
-   `plan.json` path, `masterPlan.md` path, and a concise summary of the user
-   goal or constraints.
-2. Read Claude's findings as an adversarial review of scope, sequencing,
-   discovery quality, and verification coverage.
-3. Update the draft plan only when the findings are relevant. Do not accept
-   speculative or clearly repo-incompatible suggestions just because Claude
-   proposed them.
-4. Keep Codex as the decision-maker. Claude attacks the draft; Codex owns the
-   final judgment and the resulting edits.
+The expected flow is:
+
+1. If dep maps are configured, build `dep-partition.json` from the scoped
+   files before drafting.
+2. Call `claude-bridge` `draft_plan` with the current cwd, plan name,
+   discovery path, optional dep-partition path, and the intended `plan.json`
+   and `masterPlan.md` destinations.
+3. Write Claude's returned `planJson` and `masterPlanMarkdown` to disk.
+4. Review the draft locally. Codex remains the orchestrator and may edit the
+   draft for repo-specific fit before Orbit review.
+5. Use `attack_plan` only when the draft is high-risk, materially revised, or
+   explicitly needs an adversarial second pass.
 
 If `claude-bridge` is unavailable, stop and surface the setup failure instead
-of silently skipping the attack pass.
+of silently replacing the Claude-led drafting phase with a local hand-written
+plan.
 
 ### Plan review via Orbit
 
@@ -326,7 +330,9 @@ Execution rules:
   follow-up prompt. Claude edits the same working tree directly.
 - Brainstorming uses the live Claude path via `claude-bridge`
   `brainstorm_start` and `brainstorm_status`, not the headless worker path.
-- Plan attack uses the headless Claude `attack_plan` tool before Orbit review.
+- Plan drafting uses the headless Claude `draft_plan` tool before Orbit review.
+- Plan attack remains available as an optional extra review pass for large or
+  risky drafts.
 
 The planner may provide `routingHint`, but the conductor resolves the final
 executor before execution. The default bias is Codex. Route to Claude only
@@ -535,3 +541,4 @@ All paths relative to `~/.codex/skills/lbyl-conductor/`:
 - `scripts/plan_utils.py` — read merged plan state, write progress.json mutations, and finalize completed plans from Codex sessions and helper scripts
 - `scripts/deps-query.py` — query dependency maps for consumers and dependencies
 - `scripts/deps-generate.py` — generate or regenerate dependency maps
+- `scripts/dep_partition.py` — turn dep-map output into planning groups and parallelization hints

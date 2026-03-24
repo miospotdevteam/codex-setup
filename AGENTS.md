@@ -41,7 +41,7 @@ Upstream skills also shipped from this repo:
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - During execution, treat `plan.json` as the definition and `progress.json` as the mutable runtime tracker.
-- For non-trivial work, Codex writes the draft plan, Claude attacks it through `claude-bridge`, Codex evaluates the findings and updates the draft only when the findings are relevant, then Orbit reviews the revised plan.
+- For non-trivial work, Claude drafts the plan through `claude-bridge` with the full discovery context and dep-partition context when available, Codex reviews/finalizes the draft, and Orbit reviews the result. Use `attack_plan` only for high-risk or materially revised drafts.
 - If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.

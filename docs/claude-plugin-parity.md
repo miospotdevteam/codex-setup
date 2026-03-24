@@ -73,7 +73,7 @@ It did not have:
 | Session-start enforcement | Claude `SessionStart` hook | Skill text only | High | Install `codex-guard` through Codex `[sandbox].setup` so session start locks files and resumes in-progress steps |
 | Plan-before-edit gate | `PreToolUse` hook on `Edit|Write|Bash` | Process guidance only | High | `guard.py setup` locks tracked files; `begin-step` unlocks only validated step files |
 | Parallel exploration discipline | Claude can fan out Codex helpers from the plugin side | Serial exploration guidance only | Medium | Codex conductor now requires foreground-parallel exploration before planning |
-| Plan attack before approval | Claude plugin can pressure-test Codex work during orchestration | No Codex-side equivalent | High | Codex writes the draft plan, headless Claude attacks it via `attack_plan`, Codex keeps or rejects findings, then Orbit reviews the revised draft |
+| Claude-led plan authoring before approval | Claude plugin leads writing-plans | Codex-side docs still centered Codex-authored drafts | High | Claude now drafts the plan via `draft_plan` from discovery + dep-partition context, Codex reviews/finalizes it, and `attack_plan` becomes an optional extra pass |
 | Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred approval tool after the Claude attack pass |
 | Step ownership | Hook-time ownership routing | None | High | One writable step at a time through `begin-step` / `complete-step`; preserves intent without per-tool interception |
 | Execution routing | Claude planner / operator chooses who implements | Planner-authored `executor` field | High | Conductor-owned routing resolver now stamps `executor`, `routingReason`, and routing metadata before execution, with Codex as the default |
@@ -104,8 +104,9 @@ blindly into the Codex side:
   Codex is the primary agent.
 
 - Blindly accepting Claude's planning suggestions.
-  In the inverse model, Claude attacks the plan, but Codex remains the
-  conductor and decides which findings are relevant enough to change the plan.
+  Even with Claude leading the draft, Codex remains the conductor and decides
+  which repo-specific edits or follow-up pressure-tests are required before the
+  user sees the plan.
 
 - Blindly preserving the old Codex-side single mutable `plan.json` divergence.
   The upstream intent is that plan definition stays stable while mutable
@@ -184,10 +185,11 @@ so the documented Codex workflow matches the implemented runtime path.
 Updated the Codex-side instructions so the intended asymmetric model is now:
 
 - exploration runs in parallel by default
-- Codex writes the draft plan
-- Claude attacks the plan through `claude-bridge`
-- Codex evaluates those findings and updates the draft only when relevant
-- Orbit reviews the revised draft
+- Claude drafts the plan through `claude-bridge`
+- dep-partition context feeds step sizing and parallelization where dep maps exist
+- Codex reviews and finalizes the draft locally
+- `attack_plan` is optional for high-risk or materially revised drafts
+- Orbit reviews the resulting draft
 - all brainstorming runs through live Claude
 
 ### Conductor-owned routing

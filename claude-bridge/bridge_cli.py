@@ -33,6 +33,8 @@ def main() -> int:
             result = manager.read_brainstorm_status(
                 payload["sessionId"], payload.get("tailEvents", 40)
             )
+        elif action == "draft_plan":
+            result = manager.run_draft_plan(payload)
         elif action == "attack_plan":
             result = manager.run_plan_attack(payload)
         elif action == "frontend_implement":

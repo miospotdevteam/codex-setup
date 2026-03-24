@@ -1,0 +1,46 @@
+{
+  "plan": "mobile-merchant-parity",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 22,
+  "stepTitle": "Consent parity closure review (steps 22-27)",
+  "acceptanceCriteria": "1. Consent forms support active/inactive toggling while preserving reactivation behavior and showing inactive cards faded. 2. Forms expose working preview and send actions with coherent sheet behavior. 3. Submissions support form filtering, expiry filtering, expiry badges, pagination, and PDF download/share. 4. Consent form modal supports custom fields with add/remove/reorder, 8 field types, multilingual labels, and option editing for radio/select. 5. The slice is consistent with existing mobile patterns and does not introduce obvious regressions.",
+  "date": "2026-03-24",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "WRONG_PATTERN",
+      "file": "apps/mobile/features/merchant/consent/useConsentData.ts",
+      "line": 65,
+      "summary": "formNameMap causes infinite fetch loop when submissions tab is active",
+      "detail": "formNameMap is computed as `forms.reduce(...)` directly in the hook body (line 65) without useMemo. Every render produces a new object reference. Since formNameMap is in the dependency array of fetchSubmissions (line 106), fetchSubmissions gets a new reference every render. The useEffect at line 113-117 depends on fetchSubmissions, so it fires on every render when activeTab === 'submissions'. fetchSubmissions calls setSubmissionsList/setSubmissionsTotal, which triggers a re-render, creating a new formNameMap, a new fetchSubmissions, and re-triggering the effect \u2014 an infinite loop. Fix: wrap formNameMap in useMemo with [forms] as dependency, or remove it from the fetchSubmissions useCallback deps and compute it at call time.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "WRONG_PATTERN",
+      "file": "apps/mobile/features/merchant/consent/useConsentData.ts",
+      "line": 325,
+      "summary": "handleToggleActive deactivation and handleDelete both call DELETE \u2014 same endpoint, same effect",
+      "detail": "handleToggleActive (line 330-331) deactivates a form by calling DELETE on the form endpoint. handleDelete (line 309) also calls DELETE on the same endpoint. The API DELETE handler (form-routes.ts:186-203) only sets isActive=false (soft delete). So the 'Delete' action pill and toggling the switch off are functionally identical \u2014 neither actually removes the form. The user sees a destructive-looking 'Delete' button with a confirmation dialog, but the form just reappears as inactive. Either the delete action should hard-delete (or at least filter the form from the list), or the Delete action pill should be removed in favor of the toggle alone.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "OTHER",
+      "file": "apps/mobile/features/merchant/consent/SubmissionsTab.ts",
+      "line": 282,
+      "summary": "MetaRow 'expiring' tone falls through to default color \u2014 no visual distinction from normal state",
+      "detail": "getExpiryStatus returns 'expiring' for forms expiring within 30 days, but MetaRow's color logic only handles 'expired' (terracotta) and 'valid' (olive). The 'expiring' case falls through to the default dark/cream color, making soon-to-expire submissions visually indistinguishable from those with no expiry. Consider adding an amber/yellow color for the 'expiring' tone.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "OTHER",
+      "file": "apps/mobile/features/merchant/consent/SubmissionsTab.tsx",
+      "line": 65,
+      "summary": "Client-side expiry filtering happens after server-side pagination, producing inconsistent page sizes",
+      "detail": "The server returns SUBMISSIONS_LIMIT (20) items per page, but expiryFilter is applied client-side (line 65-70) on the already-paginated result. If the user selects 'expired', they may see 3 items on page 1 and 7 on page 2, with no way to know the true filtered total. Either move the expiry filter to the server query param, or clarify in the UI that page counts refer to unfiltered results.",
+      "preventable": false
+    }
+  ]
+}

@@ -39,6 +39,7 @@ ATTACK_CATEGORIES = {
     "RISKY_ASSUMPTION",
     "OTHER",
 }
+DRAFT_PLAN_REQUIRED_TOP_KEYS = {"name", "title", "context", "review", "discovery", "steps"}
 
 
 class ClaudeBridgeError(RuntimeError):
@@ -343,6 +344,40 @@ class SessionManager:
         )
         return result
 
+    def run_draft_plan(self, args: dict[str, Any]) -> dict[str, Any]:
+        cwd = str(Path(args["cwd"]).expanduser().resolve())
+        plugin_dir = self.require_plugin_dir(args.get("pluginDir"))
+        record = self._get_or_create_session(
+            mode="draft-plan",
+            cwd=cwd,
+            bridge_session_id=args.get("bridgeSessionId"),
+            metadata={
+                "planName": args["planName"],
+                "discoveryPath": str(Path(args["discoveryPath"]).expanduser().resolve()),
+                "planPath": str(Path(args["planPath"]).expanduser().resolve()),
+                "masterPlanPath": str(Path(args["masterPlanPath"]).expanduser().resolve()),
+            },
+        )
+        prompt = self._build_draft_plan_prompt(args)
+        result = self._run_structured_claude(
+            record=record,
+            cwd=Path(cwd),
+            prompt=prompt,
+            schema=self.load_schema("draft-plan.json"),
+            allow_edits=False,
+            plugin_dir=plugin_dir,
+            allowed_tools=self._read_only_allowed_tools(),
+        )
+        self._validate_draft_plan(result)
+        result.update(
+            {
+                "bridgeSessionId": record.bridge_session_id,
+                "claudeSessionId": record.claude_session_id,
+                "round": record.rounds,
+            }
+        )
+        return result
+
     def run_verification(self, args: dict[str, Any]) -> dict[str, Any]:
         cwd = str(Path(args["cwd"]).expanduser().resolve())
         plugin_dir = self.require_plugin_dir(args.get("pluginDir"))
@@ -400,6 +435,19 @@ class SessionManager:
                 raise ClaudeBridgeError(f"Claude returned an invalid severity: {severity}")
             if category not in ATTACK_CATEGORIES:
                 raise ClaudeBridgeError(f"Claude returned an invalid attack category: {category}")
+
+    def _validate_draft_plan(self, result: dict[str, Any]) -> None:
+        plan_json = result.get("planJson")
+        if not isinstance(plan_json, dict):
+            raise ClaudeBridgeError("Claude returned an invalid draft plan payload.")
+        missing = sorted(DRAFT_PLAN_REQUIRED_TOP_KEYS - set(plan_json))
+        if missing:
+            raise ClaudeBridgeError(
+                "Claude draft plan is missing required top-level keys: " + ", ".join(missing)
+            )
+        master_plan_markdown = result.get("masterPlanMarkdown")
+        if not isinstance(master_plan_markdown, str) or not master_plan_markdown.strip():
+            raise ClaudeBridgeError("Claude returned an empty masterPlanMarkdown draft.")
 
     def _read_only_allowed_tools(self) -> list[str]:
         return [
@@ -697,6 +745,57 @@ Rules:
             "masterPlanPath": str(Path(args["masterPlanPath"]).expanduser().resolve()),
             "userGoal": args.get("userGoal") or "(not provided)",
             "discoverySummary": args.get("discoverySummary") or "(not provided)",
+        }
+        return template.format_map(mapping)
+
+    def _build_draft_plan_prompt(self, args: dict[str, Any]) -> str:
+        template = (
+            self.repo_root / "claude-bridge" / "prompts" / "draft-plan-template.md"
+        ).read_text(encoding="utf-8")
+        dep_partition_path = args.get("depPartitionPath")
+        mapping = {
+            "cwd": str(Path(args["cwd"]).expanduser().resolve()),
+            "planName": args["planName"],
+            "discoveryPath": str(Path(args["discoveryPath"]).expanduser().resolve()),
+            "depPartitionPath": (
+                str(Path(dep_partition_path).expanduser().resolve())
+                if dep_partition_path
+                else "(not provided)"
+            ),
+            "planPath": str(Path(args["planPath"]).expanduser().resolve()),
+            "masterPlanPath": str(Path(args["masterPlanPath"]).expanduser().resolve()),
+            "userGoal": args.get("userGoal") or "(not provided)",
+            "discoverySummary": args.get("discoverySummary") or "(not provided)",
+            "writingPlansSkillPath": str(
+                (self.repo_root / "codex-skills" / "lbyl-writing-plans" / "SKILL.md").resolve()
+            ),
+            "planSchemaPath": str(
+                (
+                    self.repo_root
+                    / "codex-skills"
+                    / "lbyl-conductor"
+                    / "references"
+                    / "plan-schema.md"
+                ).resolve()
+            ),
+            "masterPlanFormatPath": str(
+                (
+                    self.repo_root
+                    / "codex-skills"
+                    / "lbyl-conductor"
+                    / "references"
+                    / "master-plan-format.md"
+                ).resolve()
+            ),
+            "dependencyMappingPath": str(
+                (
+                    self.repo_root
+                    / "codex-skills"
+                    / "lbyl-conductor"
+                    / "references"
+                    / "dependency-mapping.md"
+                ).resolve()
+            ),
         }
         return template.format_map(mapping)
 

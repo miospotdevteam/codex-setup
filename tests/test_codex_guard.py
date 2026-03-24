@@ -156,6 +156,15 @@ class GuardCliTests(unittest.TestCase):
         self.assertTrue(is_user_writable(self.root / "src" / "a.txt"))
         self.assertFalse(is_user_writable(self.root / "src" / "b.txt"))
 
+    def test_setup_keeps_claude_executor_locked(self) -> None:
+        self.make_plan(step_status="in_progress", executor="claude", routing_hint="claude")
+        result = self.run_guard("setup")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("routed to Claude", result.stdout)
+        self.assertIn("frontend_implement", result.stdout)
+        self.assertFalse(is_user_writable(self.root / "src" / "a.txt"))
+        self.assertFalse(is_user_writable(self.root / "src" / "b.txt"))
+
     def test_setup_resumes_in_progress_step_from_progress_json(self) -> None:
         self.make_plan(step_status="pending")
         self.write_progress({"steps": {"1": {"status": "in_progress"}}})
@@ -170,6 +179,28 @@ class GuardCliTests(unittest.TestCase):
         result = self.run_guard("begin-step", "1")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("validate-plan must pass", result.stderr)
+
+    def test_begin_step_rejects_claude_executor(self) -> None:
+        self.make_plan(executor="claude", routing_hint="claude")
+        self.assertEqual(self.run_guard("validate-plan").returncode, 0)
+
+        result = self.run_guard("begin-step", "1")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("routed to Claude", result.stderr)
+        self.assertIn("frontend_implement", result.stderr)
+        self.assertFalse((self.root / ".guard-state").exists())
+        self.assertEqual(self.load_plan()["steps"][0]["status"], "pending")
+
+    def test_begin_step_allows_codex_executor(self) -> None:
+        self.make_plan(executor="codex")
+        self.assertEqual(self.run_guard("validate-plan").returncode, 0)
+
+        result = self.run_guard("begin-step", "1")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("unlocked", result.stdout)
+        self.assertTrue(is_user_writable(self.root / "src" / "a.txt"))
 
     def test_complete_step_requires_claude_pass(self) -> None:
         self.make_plan()

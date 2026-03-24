@@ -243,9 +243,9 @@ This repo now assumes an intentionally asymmetric split:
 
 - Codex is the orchestrator, runs exploration in parallel, and is the default implementer.
 - Claude handles all brainstorming through `claude-bridge`.
-- Codex writes draft plans, Claude attacks them through the authenticated
-  `attack_plan` tool, and Codex decides which findings are relevant enough to
-  fold back into the plan before Orbit review.
+- Claude drafts plans through the authenticated `draft_plan` tool using
+  discovery plus dep-partition context, and Codex reviews/finalizes that draft
+  before Orbit review.
 - Claude handles materially visual frontend implementation through the
   headless `frontend_implement` tool.
 - Claude is a hard verification gate before steps are marked `done`.
@@ -264,8 +264,9 @@ Plan steps should carry conductor-owned routing metadata:
 - `claudeVerify: true` by default on every step
 
 Brainstorming uses a live Claude session surfaced in VS Code and exposed back
-to Codex through `brainstorm_start` and `brainstorm_status`. Plan attack uses a
-headless Claude pass exposed through `attack_plan`.
+to Codex through `brainstorm_start` and `brainstorm_status`. Plan drafting uses
+a headless Claude pass exposed through `draft_plan`. `attack_plan` remains
+available as an optional extra adversarial review pass for high-risk drafts.
 
 Non-PASS verification rounds write JSON findings to
 [`usage-errors/claude-findings`](/Users/robertobortolaso/Projects/codex-setup/usage-errors/claude-findings).

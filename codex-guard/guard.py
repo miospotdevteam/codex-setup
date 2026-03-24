@@ -244,6 +244,13 @@ def format_begin(step: dict[str, Any]) -> str:
     return f"Step {step['id']} unlocked: {len(step.get('files', []))} file(s) writable"
 
 
+def format_claude_route(step: dict[str, Any], *, command: str) -> str:
+    return (
+        f"Step {step['id']} is routed to Claude and cannot be started with {command}. "
+        "Use claude-bridge frontend_implement to continue."
+    )
+
+
 class GuardError(RuntimeError):
     pass
 
@@ -310,6 +317,10 @@ def cmd_setup(project_root: Path, args: argparse.Namespace) -> int:
     plan_utils, plan = read_plan(plan_path)
     current_step = plan_utils.get_next_step(plan)
     if current_step and current_step.get("status") == "in_progress":
+        if current_step.get("executor") == "claude":
+            append_audit(project_root, "resume_blocked_claude_executor", step=current_step["id"])
+            print(format_claude_route(current_step, command="setup"))
+            return 0
         files = step_files(project_root, current_step)
         for path in files:
             make_user_writable(path)
@@ -363,6 +374,8 @@ def cmd_begin_step(project_root: Path, args: argparse.Namespace) -> int:
     step = find_step(plan, args.step_id)
     if step.get("status") == "done":
         raise GuardError(f"Step {args.step_id} is already done.")
+    if step.get("executor") == "claude":
+        raise GuardError(format_claude_route(step, command="begin-step"))
 
     files = step_files(project_root, step)
     for path in files:

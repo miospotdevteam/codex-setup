@@ -1,6 +1,6 @@
 ---
 name: lbyl-writing-plans
-description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces plan.json (immutable plan definition), progress.json (mutable execution state created on first mutation), and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Codex writes the draft plan, Claude attacks it, then Codex decides what to change before Orbit review. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
+description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces plan.json (immutable plan definition), progress.json (mutable execution state created on first mutation), and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Claude drafts the plan from discovery and dep-partition context, Codex reviews and finalizes it, and Orbit reviews the result. Consumes discovery.md from exploration phase. Invoke explicitly at Step 2 of the conductor. Do NOT use when: the user explicitly says 'just do it' or 'no plan', resuming an existing plan (use persistent-plans resumption protocol), executing a plan that already exists on disk, or doing pure research/exploration without code changes."
 ---
 
 # Writing Plans
@@ -66,14 +66,66 @@ not planning):
 - **git-checklist.md** — applies at every commit step
 - **linting-checklist.md** — applies after any code changes
 
-### 3. Write the plan (dual output)
+### 3. Build dep-partition context before drafting
+
+If dep maps are configured, convert the target set into machine-readable
+planning context before asking Claude to draft the plan.
+
+1. Identify the entry-point files that define the scope.
+2. Run the dep-partition helper on those files:
+
+```bash
+python3 ~/.codex/skills/lbyl-conductor/scripts/dep_partition.py <project_root> <file_path> [<file_path> ...]
+```
+
+3. Save the JSON in the active plan directory as `dep-partition.json`.
+4. Use that file as planning input, not just as notes. It should shape:
+   - which files stay in the same step
+   - where a sub-plan is mandatory
+   - which groups are safe to parallelize later
+   - which cross-module boundaries should be tackled earlier
+
+If dep maps are not configured, skip this file and document that the plan is
+relying on manual blast-radius judgment.
+
+### 4. Ask Claude to draft the plan
+
+Claude is the default plan author in this workflow. Codex remains the
+orchestrator and later reviewer.
+
+Call `claude-bridge` `draft_plan` with:
+
+- current cwd
+- plan name
+- discovery.md path
+- dep-partition.json path when available
+- intended plan.json path
+- intended masterPlan.md path
+- concise user goal / constraints
+- concise discovery summary if helpful
+
+Claude returns structured draft content:
+
+- `planJson`
+- `masterPlanMarkdown`
+- `summary`
+- `notes`
+
+Write the returned `planJson` to `plan.json` and the returned
+`masterPlanMarkdown` to `masterPlan.md`.
+
+If `claude-bridge` is unavailable, stop and surface the setup issue instead of
+silently falling back to a hand-written local draft.
+
+### 5. Review and finalize Claude's draft
 
 Produce **both** files in `.temp/plan-mode/active/<plan-name>/`:
 
 #### plan.json — immutable plan definition
 
 Use the schema from `references/plan-schema.md`. Codex reads this file as the
-definition and merges it with `progress.json` during execution. Include:
+definition and merges it with `progress.json` during execution. Ensure Claude's
+draft includes:
 
 - All discovery findings in the `discovery` object
 - A top-level `review` object initialized for Orbit gating
@@ -114,6 +166,15 @@ or tradeoff changes (see "Updating an approved plan" below).
 
 Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
 checkboxes. No execution state. Just what, why, and what could go wrong.
+
+After Claude returns the draft, read both files from disk and review them
+critically:
+
+- keep changes that match repo conventions and the user request
+- correct any repo-specific misses or overreach
+- preserve useful dep-partition boundaries unless there is a concrete reason
+  to merge or reorder them
+- keep Codex as the final local reviewer before Orbit
 
 #### Step granularity: how steps map to TDD
 
@@ -220,7 +281,7 @@ Copy-only or behavior-only changes should still resolve to Codex.
 Every step should also carry `claudeVerify: true` in this repo's default
 workflow. Claude verification is a hard gate before `done`.
 
-### 4. Evaluate sub-plan needs (mandatory checkpoint)
+### 6. Evaluate sub-plan needs (mandatory checkpoint)
 
 **Before saving the plan, evaluate EVERY step against these criteria:**
 
@@ -249,13 +310,24 @@ If ANY criterion is met, restructure the step NOW:
 
 Groups should have 3-8 files each. If a group exceeds 8, split it.
 
-**This is a hard checkpoint.** Do not proceed to Step 5 until every step
+**This is a hard checkpoint.** Do not proceed to Step 7 until every step
 has been evaluated. If you skip this, large steps will fail mid-execution
 when context runs out.
 
-### 5. Run a Claude attack pass on the draft
+### 7. Optional Claude attack pass for high-risk drafts
 
-After saving both files to disk, attack the draft before the user sees it:
+The default plan-authoring pass already came from Claude. A second adversarial
+Claude pass is optional and should be reserved for large, risky, or materially
+edited drafts.
+
+Use `claude-bridge` `attack_plan` only when one of these is true:
+
+- the plan is large or high-blast-radius
+- Codex materially rewrote Claude's draft
+- the sequencing or verification strategy still feels fragile
+- the user explicitly asks for extra pressure-testing
+
+When you do run it:
 
 1. Call `claude-bridge` `attack_plan` with the current cwd, the plan name,
    the `plan.json` path, the `masterPlan.md` path, and any concise summary of
@@ -266,10 +338,10 @@ After saving both files to disk, attack the draft before the user sees it:
 4. If Claude proposes irrelevant, speculative, or already-covered changes,
    reject them and keep the draft as-is.
 
-If `claude-bridge` is unavailable, stop and surface the setup issue instead of
-skipping the attack pass silently.
+If you skip this pass, that is acceptable in the default Claude-led planning
+flow. Do not invent a fake attack result.
 
-### 6. Present for review via Orbit
+### 8. Present for review via Orbit
 
 After saving both files to disk, present masterPlan.md to the user for
 interactive review using the Orbit MCP:
@@ -288,10 +360,10 @@ the setup issue instead of silently skipping review.
 
 `orbit_await_review` returns JSON with `status` and `threads`.
 
-- **`approved`, no threads** → proceed to step 7.
+- **`approved`, no threads** → proceed to step 9.
 - **`approved`, with threads** → read each thread, reply with
   `orbit_reply` acknowledging the feedback, resolve threads, then proceed
-  to step 7.
+  to step 9.
 - **`changes_requested`** → read all threads. Update both masterPlan.md
   and plan.json to address the feedback. Reply to each thread explaining
   what changed. Resolve threads. Call `orbit_await_review` again for
@@ -310,7 +382,7 @@ When the review is approved, update `plan.json.review` before execution:
 }
 ```
 
-### 7. Summarize and proceed (post-approval)
+### 9. Summarize and proceed (post-approval)
 
 After the plan is approved via Orbit:
 
@@ -365,9 +437,9 @@ This skill must NOT:
   for review via Orbit MCP before execution unless the user explicitly says
   to skip review, in which case `plan.json.review.status` must be set to
   `skipped` with a concrete `skipReason`.
-- **Skip the Claude attack pass** — non-trivial draft plans must be attacked
-  through `claude-bridge` before Orbit review unless the user explicitly
-  skips the structured planning flow.
+- **Skip the Claude draft pass** — in this repo's default workflow, Claude is
+  the primary plan author. If `claude-bridge draft_plan` did not produce the
+  draft, the plan path is incomplete unless the user explicitly opts out.
 - **Allow a hand-written substitute plan** — if `lbyl-writing-plans` did not
   generate the files, the plan is invalid and must not be executed.
 - **Pretend `masterPlan.md` is the runtime tracker** — execution state
@@ -397,7 +469,10 @@ directory).
   exactly what to do, which files, and how to verify. Plans describe intent;
   the executing engineer writes the code.
 - **masterPlan.md is write-once** — frozen after Orbit approval. All runtime
-  state lives in plan.json
+  state lives in progress.json
+- **Claude drafts, Codex finalizes** — Claude authors the first draft from
+  discovery and dep-partition context; Codex remains the final local reviewer
+  before Orbit
 - **Approved plan means proceed** — after Orbit approval, keep executing
   unless a material scope/tradeoff change requires a fresh review
 - **DRY / YAGNI** — only what's needed now, nothing speculative
