@@ -37,6 +37,7 @@ Upstream skills also shipped from this repo:
 
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
+- The installer also writes a managed machine-global default block to `~/.codex/AGENTS.md`, so Codex sessions from anywhere on this machine inherit that default unless a nearer project `AGENTS.md` overrides it.
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - For non-trivial work, Codex writes the draft plan, Claude attacks it through `claude-bridge`, Codex evaluates the findings and updates the draft only when the findings are relevant, then Orbit reviews the revised plan.
@@ -69,4 +70,5 @@ multi-machine use, prefer `scripts/bootstrap-codex-skills-from-github.sh` so
 each machine clones or pulls the GitHub repo and then runs the local installer.
 The installer also configures `codex-guard` globally for Codex unless
 `SKIP_CODEX_GUARD_INSTALL=1` is set, and configures `claude-bridge` unless
-`SKIP_CLAUDE_BRIDGE_INSTALL=1` is set.
+`SKIP_CLAUDE_BRIDGE_INSTALL=1` is set. It also installs the machine-global
+Codex default block unless `SKIP_GLOBAL_AGENTS_INSTALL=1` is set.

@@ -61,6 +61,15 @@ The same installer also configures `codex-guard` by default:
 - runs `codex-guard/guard.py setup` at session start in future Codex sessions
 - makes source files read-only by default until a validated plan step is begun
 
+The installer also configures a machine-global Codex instruction layer:
+
+- writes a managed defaults block to `~/.codex/AGENTS.md`
+- makes coding work default to `lbyl-conductor` plus
+  `lbyl-engineering-discipline` in future Codex sessions
+- preserves any unrelated user content in `~/.codex/AGENTS.md`
+- defers to nearer project or nested `AGENTS.md` files when a repo provides
+  stronger local guidance
+
 If a local Orbit repo is available at `~/Projects/orbit` or `~/projects/orbit`,
 the installer also:
 
@@ -98,6 +107,12 @@ To skip Codex guard setup during a skill install:
 
 ```bash
 SKIP_CODEX_GUARD_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To skip installing the machine-global Codex defaults:
+
+```bash
+SKIP_GLOBAL_AGENTS_INSTALL=1 bash scripts/install-codex-skills.sh
 ```
 
 To skip the Claude bridge during a skill install:
@@ -155,6 +170,7 @@ REPO_URL=https://github.com/<org>/codex-setup.git bash scripts/bootstrap-codex-s
 BRANCH=main bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_ORBIT_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_CODEX_GUARD_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
+SKIP_GLOBAL_AGENTS_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_PULL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 ```
@@ -165,7 +181,10 @@ pull and reinstall the latest version.
 
 ## Use in Codex
 
-Mention the skills explicitly or rely on project `AGENTS.md` defaults.
+Mention the skills explicitly or rely on project `AGENTS.md` defaults. After
+running the installer, Codex also has a machine-global default in
+`~/.codex/AGENTS.md`, so coding work should already bias toward the conductor
+unless a nearer project `AGENTS.md` overrides it.
 Typical prompts:
 
 - `Use lbyl-conductor and lbyl-engineering-discipline for this task.`
