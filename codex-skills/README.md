@@ -28,6 +28,10 @@ under `look-before-you-leap/skills/`, except upstream `frontend-design`. The
 upstream source stays in the repo for sync, but installed Codex sessions use
 `lbyl-frontend-design` as the single standard frontend design skill.
 
+The same installer also configures `codex-guard` by default by writing a
+Codex `[sandbox].setup` entry that runs `codex-guard/guard.py setup` at
+session start in future Codex sessions.
+
 If a local Orbit checkout is available, the same installer also configures the
 `orbit` MCP server in Codex and refreshes the Orbit VS Code extension so Orbit
 review tools are available at startup in future Codex sessions.
@@ -42,6 +46,12 @@ To install the skill pack without Orbit:
 
 ```bash
 SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To install the skill pack without Codex guard:
+
+```bash
+SKIP_CODEX_GUARD_INSTALL=1 bash scripts/install-codex-skills.sh
 ```
 
 To install the skill pack without the Claude bridge:
@@ -83,6 +93,8 @@ Ask for the skills explicitly:
 - Claude is still part of the default workflow through `claude-bridge`:
   live brainstorming, Claude-routed visual frontend steps, and the hard
   verification gate.
+- When installed, `codex-guard` is the hard-default write gate on the Codex
+  side for validated step execution.
 - The conductor assumes the companion skills are active for coding work.
 - Persistent plans use `plan.json` as execution state and `masterPlan.md` as
   the frozen Orbit-reviewed proposal.

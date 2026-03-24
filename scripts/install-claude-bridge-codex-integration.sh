@@ -4,7 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXT_DIR="$ROOT_DIR/claude-bridge-vscode"
-SERVER_PATH="$ROOT_DIR/claude-bridge/server.py"
+MCP_DIR="$ROOT_DIR/claude-bridge"
+SERVER_PATH="$MCP_DIR/server.mjs"
 MCP_NAME="${CLAUDE_BRIDGE_MCP_NAME:-claude-bridge}"
 CODEX_BIN="${CODEX_BIN:-codex}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
@@ -75,6 +76,11 @@ if [ ! -f "$SERVER_PATH" ]; then
   exit 1
 fi
 
+if [ ! -f "$MCP_DIR/package.json" ]; then
+  echo "Missing claude-bridge package.json in $MCP_DIR" >&2
+  exit 1
+fi
+
 if [ ! -f "$EXT_DIR/package.json" ]; then
   echo "Missing claude-bridge extension package.json in $EXT_DIR" >&2
   exit 1
@@ -82,6 +88,12 @@ fi
 
 printf 'Using claude-bridge repo: %s\n' "$ROOT_DIR"
 printf 'Using Claude CLI: %s\n' "$CLAUDE_CMD"
+
+if [ ! -d "$MCP_DIR/node_modules" ]; then
+  (cd "$MCP_DIR" && "$NPM_CMD" install)
+else
+  printf 'claude-bridge MCP dependencies are current: %s\n' "$MCP_DIR/node_modules"
+fi
 
 if [ ! -d "$EXT_DIR/node_modules" ]; then
   (cd "$EXT_DIR" && "$NPM_CMD" install)
@@ -121,6 +133,6 @@ fi
 printf 'Installed VS Code extension from %s\n' "$latest_vsix"
 
 "$CODEX_CMD" mcp remove "$MCP_NAME" >/dev/null 2>&1 || true
-"$CODEX_CMD" mcp add "$MCP_NAME" -- "$PYTHON_CMD" "$SERVER_PATH" >/dev/null
+"$CODEX_CMD" mcp add "$MCP_NAME" -- "$NODE_CMD" "$SERVER_PATH" >/dev/null
 printf 'Configured Codex MCP server %s\n' "$MCP_NAME"
 "$CODEX_CMD" mcp get "$MCP_NAME"

@@ -2,20 +2,14 @@
 
 masterPlan.md is the **user-facing proposal document** reviewed via Orbit.
 It communicates intent, critical decisions, warnings, and risk — NOT
-execution state. Execution state lives in `plan.json` (see
+execution state. Execution state lives in `progress.json` (see
 `references/plan-schema.md`).
 
 **Write-once**: masterPlan.md is frozen after Orbit approval. It is never
-updated during execution. All runtime state (progress, results, deviations)
-lives in `plan.json`. This keeps the proposal document as a stable record
-of what was agreed upon.
-
-After approval, execution may still add **non-material follow-through** in
-plan.json without rewriting masterPlan.md. Use this for adjacent
-consistency work, mirrored fixes, extra verification, and other small
-execution-time additions that stay within the approved objective. If the
-objective, risk profile, or tradeoff changes materially, revise the plan
-and get a fresh Orbit review instead of silently stretching the old one.
+updated during execution. `plan.json` is also immutable after approval.
+All runtime state (progress, results, deviations) lives in `progress.json`,
+updated via `plan_utils.py`. This keeps both proposal and plan definition
+as stable records of what was agreed upon.
 
 No `[x]`/`[ ]` checkboxes. No progress tracking. No result fields.
 Just what, why, and what could go wrong.
@@ -85,8 +79,13 @@ disciplines.">
 ## Steps
 
 ### Step 1: <Title>
+- **Owner**: claude | codex
+- **Mode**: claude-impl | codex-impl | collab-split | dual-pass
+- **Routing**: <category from routing matrix> → <justification>
 - **Skill**: `look-before-you-leap:refactoring` | none
 - **Simplify**: true/false
+- **QA**: true/false
+- **Codex verify**: true/false
 - **Sub-plan**: none
 - **Files involved**: `src/foo.ts`, `src/bar.ts`
 - **Description**: What needs to happen in this step.
@@ -164,8 +163,13 @@ High — issue is clear, fix is straightforward.
 ## Steps
 
 ### Step 1: Fix button alignment
+- **Owner**: claude
+- **Mode**: claude-impl
+- **Routing**: Frontend UI / visual design → claude-impl
 - **Skill**: none
 - **Simplify**: false
+- **QA**: false
+- **Codex verify**: true
 - **Sub-plan**: none
 - **Files involved**: `src/app/(auth)/login/page.tsx`
 - **Description**: Add `w-full` to the button wrapper div for mobile viewports
@@ -178,17 +182,18 @@ None.
 None.
 ```
 
-## Relationship to plan.json
+## Relationship to plan.json and progress.json
 
-masterPlan.md and plan.json are written together during the planning phase
-(see `writing-plans` skill). They contain the same steps, but:
+masterPlan.md, plan.json, and progress.json are written during the planning
+phase (see `writing-plans` skill). They contain the same steps, but:
 
-| Aspect | plan.json | masterPlan.md |
-|---|---|---|
-| **Audience** | Claude + hooks | User (via Orbit) |
-| **Execution state** | Yes (status, progress, results) | No |
-| **Updated during execution** | Yes (constantly) | Never (frozen after approval) |
-| **Reviewed via Orbit** | No | Yes |
-| **Parsed by hooks** | Yes | Legacy fallback only |
+| Aspect | plan.json | progress.json | masterPlan.md |
+|---|---|---|---|
+| **Audience** | Claude + hooks | Claude + hooks | User (via Orbit) |
+| **Content** | Step definitions, criteria, files, ownership | Status, results, progress items, deviations | Intent, decisions, risks |
+| **Execution state** | No (immutable after approval) | Yes (all mutable state) | No |
+| **Updated during execution** | Never (frozen) | Yes (via plan_utils.py) | Never (frozen) |
+| **Reviewed via Orbit** | No | No | Yes |
+| **Parsed by hooks** | Yes (structure) | Yes (state) | Legacy fallback only |
 
-The plan.json schema is documented in `references/plan-schema.md`.
+The schemas are documented in `references/plan-schema.md`.

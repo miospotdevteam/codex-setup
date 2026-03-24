@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # PostToolUse hook: Verify step completion before proceeding to next step.
 #
-# After Edit/Write to plan.json/masterPlan.md, or after Bash calls that
-# update plan.json via plan_utils.py, compares step statuses with a cached
+# After Edit/Write to plan.json/progress.json/masterPlan.md, or after Bash calls that
+# update progress via plan_utils.py, compares step statuses with a cached
 # snapshot. When a step transitions to done/[x]:
 # 1. For codexVerify steps: checks if result field contains a Codex verdict
 #    (pattern: "Codex: PASS" or "Codex: FAIL"). If missing, reverts the
@@ -53,6 +53,8 @@ print(data.get('tool_input', {}).get('file_path', ''))
 
   if [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/plan.json" ]]; then
     PLAN_DIR="$(dirname "$FILE_PATH")"
+  elif [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/progress.json" ]]; then
+    PLAN_DIR="$(dirname "$FILE_PATH")"
   elif [[ "$FILE_PATH" == *"/.temp/plan-mode/active/"*"/masterPlan.md" ]]; then
     PLAN_DIR="$(dirname "$FILE_PATH")"
   fi
@@ -80,8 +82,9 @@ project_root = os.environ.get("HOOK_PROJECT_ROOT", "")
 if "plan_utils" not in command:
     sys.exit(0)
 
-# Must contain update-step with "done" as the status argument (not a substring)
-if not re.search(r"update-step\s+\S+\s+\d+\s+done(?:\s|$|&|;)", command):
+# Must contain update-step done OR complete-step
+if not (re.search(r"update-step\s+\S+\s+\d+\s+done(?:\s|$|&|;)", command) or
+        re.search(r"complete-step\s+", command)):
     sys.exit(0)
 
 # Extract plan.json path from PLAN_JSON="..." variable assignment in the command
@@ -227,6 +230,31 @@ export HOOK_PLAN_NAME="$plan_name"
 python3 << 'PYEOF'
 import json, os, re, sys
 
+
+def count_acceptance_criteria_items(acceptance_criteria):
+    if not isinstance(acceptance_criteria, str):
+        return 0
+
+    text = acceptance_criteria.strip()
+    if not text:
+        return 0
+
+    if re.search(r"(?:^|\s)\d+\.\s+", text):
+        items = [
+            item.strip()
+            for item in re.split(r"(?:^|\s)(?=\d+\.\s+)", text)
+            if item.strip()
+        ]
+        return len(items)
+
+    items = [
+        item.strip()
+        for item in re.split(r"[.;](?:\s+|$)", text)
+        if item.strip()
+    ]
+    return len(items)
+
+
 steps = os.environ["HOOK_NEWLY_COMPLETED"]
 plan_path = os.environ["HOOK_PLAN_PATH"]
 plan_name = os.environ["HOOK_PLAN_NAME"]
@@ -238,8 +266,66 @@ step_list = steps.split()
 step_display = ", ".join(f"Step {s}" for s in step_list)
 markers = ", ".join(f".verify-pending-{s}" for s in step_list)
 
-# Check codexVerify steps and enforce Codex-before-done gate
+# For strict plans, also check for verification receipts
+receipt_mode = "legacy"
+project_root = os.environ.get("HOOK_PROJECT_ROOT", "")
+receipt_blocked_steps = []
+
+if os.path.isfile(plan_json_path):
+    try:
+        with open(plan_json_path) as f:
+            _plan_data = json.load(f)
+        receipt_mode = _plan_data.get("_receiptMode", "legacy")
+    except Exception:
+        pass
+
+if receipt_mode == "strict" and project_root:
+    # Check receipts for each completed step
+    plugin_root = os.path.dirname(os.path.dirname(plan_utils_path))
+    receipt_utils_path = os.path.join(
+        os.path.dirname(plugin_root), "scripts", "receipt_utils.py"
+    )
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("receipt_utils", receipt_utils_path)
+        receipt_utils = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(receipt_utils)
+
+        proj_id = receipt_utils.project_id(project_root)
+        plan_name_val = _plan_data.get("name", "unknown")
+
+        for sid in step_list:
+            step_id = int(sid)
+            step_data = None
+            for s in _plan_data.get("steps", []):
+                if s["id"] == step_id:
+                    step_data = s
+                    break
+            if not step_data:
+                continue
+
+            owner = step_data.get("owner", "claude")
+            mode = step_data.get("mode", "claude-impl")
+            extra = {"step": step_id}
+
+            if mode in ("claude-impl", "dual-pass") or owner == "claude":
+                exists, _ = receipt_utils.check("codex_verify", proj_id, plan_name_val, extra)
+                if not exists:
+                    receipt_blocked_steps.append(sid)
+            elif mode == "codex-impl" or owner == "codex":
+                impl_exists, _ = receipt_utils.check("codex_impl", proj_id, plan_name_val, extra)
+                verify_exists, _ = receipt_utils.check("claude_verify", proj_id, plan_name_val, extra)
+                if not impl_exists or not verify_exists:
+                    receipt_blocked_steps.append(sid)
+    except Exception:
+        pass
+
+# Check codexVerify steps and enforce direction-locked verification gate
+# - owner=="claude" (claude-impl): result must match "Codex: (PASS|FAIL|skipped)"
+# - owner=="codex" (codex-impl): result must match "Claude: verified" AND
+#   must NOT contain "Codex: PASS" (prevents Codex self-verification)
 codex_blocked_steps = []
+direction_blocked_steps = []
 plan = None
 if os.path.isfile(plan_json_path):
     try:
@@ -250,21 +336,110 @@ if os.path.isfile(plan_json_path):
             sid = str(step["id"])
             if sid not in step_list:
                 continue
-            if not step.get("codexVerify", False):
+            if not step.get("codexVerify", True):
                 continue
-            # Check if result field contains a Codex verdict
             result = step.get("result") or ""
-            if not re.search(r"Codex:\s*(PASS|FAIL)", result, re.IGNORECASE):
-                codex_blocked_steps.append(sid)
+            owner = step.get("owner", "claude")
+            mode = step.get("mode", "claude-impl")
+
+            if mode == "collab-split":
+                # collab-split: inspect groups to determine required verdicts
+                has_codex = re.search(r"Codex:\s*(PASS|FAIL|skipped)", result, re.IGNORECASE)
+                has_claude = re.search(r"Claude:\s*verified", result, re.IGNORECASE)
+                # Check which owner types exist in the groups
+                sub_plan = step.get("subPlan") or {}
+                groups = sub_plan.get("groups", [])
+                has_claude_groups = any(g.get("owner", owner) == "claude" for g in groups)
+                has_codex_groups = any(g.get("owner", owner) == "codex" for g in groups)
+                # Require matching verdicts for each owner type present
+                missing = False
+                if has_claude_groups and not has_codex:
+                    missing = True  # Claude groups need Codex verification
+                if has_codex_groups and not has_claude:
+                    missing = True  # Codex groups need Claude verification
+                if not has_codex and not has_claude:
+                    missing = True  # No verdicts at all
+                if missing:
+                    codex_blocked_steps.append(sid)
+            elif owner == "codex":
+                # codex-impl: Claude must verify independently
+                has_claude_verified = re.search(r"Claude:\s*verified", result, re.IGNORECASE)
+                has_codex_pass = re.search(r"Codex:\s*PASS", result, re.IGNORECASE)
+                if not has_claude_verified:
+                    direction_blocked_steps.append(sid)
+                elif has_codex_pass:
+                    # Codex verified its own work — reject
+                    direction_blocked_steps.append(sid)
+            else:
+                # claude-impl: Codex must verify
+                if not re.search(r"Codex:\s*(PASS|FAIL|skipped)", result, re.IGNORECASE):
+                    codex_blocked_steps.append(sid)
     except Exception:
         pass
 
-# If any codexVerify steps lack a Codex verdict, revert them and block
+criterion_warnings = []
+if plan is not None:
+    for step in plan.get("steps", []):
+        sid = str(step["id"])
+        if sid not in step_list:
+            continue
+        result = step.get("result") or ""
+        criterion_markers = len(re.findall(r"^### Criterion:", result, re.MULTILINE))
+        criteria_count = count_acceptance_criteria_items(step.get("acceptanceCriteria") or "")
+        if criteria_count and criterion_markers < criteria_count:
+            criterion_warnings.append(
+                f"RESULT TEMPLATE WARNING — Step {sid}: "
+                f"Result field has {criterion_markers} criterion markers but "
+                f"acceptanceCriteria has {criteria_count} items. Ensure each "
+                f"criterion is mapped to evidence using ### Criterion markers."
+            )
+
+criterion_warning_text = ""
+if criterion_warnings:
+    criterion_warning_text = "\n".join(criterion_warnings) + "\n\n"
+
+# Handle direction-blocked codex-impl steps
+if direction_blocked_steps:
+    for sid in direction_blocked_steps:
+        try:
+            plan_utils.update_step_status(plan_json_path, int(sid), "in_progress")
+        except Exception:
+            pass
+        marker_path = os.path.join(plan_dir, f".verify-pending-{sid}")
+        if os.path.exists(marker_path):
+            os.remove(marker_path)
+
+    blocked_display = ", ".join(f"Step {s}" for s in direction_blocked_steps)
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": (
+                f"CLAUDE INDEPENDENT VERIFICATION REQUIRED — "
+                f"{blocked_display} {'is' if len(direction_blocked_steps) == 1 else 'are'} "
+                "codex-impl (owner: codex) with `codexVerify: true`.\n\n"
+                f"{'This step has' if len(direction_blocked_steps) == 1 else 'These steps have'} "
+                "been reverted to `in_progress`.\n\n"
+                "For codex-impl steps, CLAUDE must verify independently — "
+                "Codex cannot verify its own work.\n\n"
+                "1. Read `git diff --name-only` to see what Codex changed\n"
+                "2. Read EVERY modified file (at least changed sections)\n"
+                "3. Run tsc/lint/tests\n"
+                "4. Check each acceptance criterion against actual code\n"
+                "5. If dep maps exist, run deps-query on modified shared files\n"
+                "6. Set the result field to include 'Claude: verified'\n"
+                "7. Do NOT include 'Codex: PASS' — that would be rejected\n"
+                "8. Then mark the step done again"
+            )
+        }
+    }
+    json.dump(output, sys.stdout)
+    sys.exit(0)
+
+# Handle codex-blocked claude-impl steps
 if codex_blocked_steps:
-    # Revert blocked steps to in_progress and remove their markers
     for sid in codex_blocked_steps:
         try:
-            plan_utils.update_step(plan_json_path, int(sid), "in_progress")
+            plan_utils.update_step_status(plan_json_path, int(sid), "in_progress")
         except Exception:
             pass
         marker_path = os.path.join(plan_dir, f".verify-pending-{sid}")
@@ -281,17 +456,45 @@ if codex_blocked_steps:
                 "`codexVerify: true` but no Codex verdict in the result field.\n\n"
                 f"{'This step has' if len(codex_blocked_steps) == 1 else 'These steps have'} "
                 "been reverted to `in_progress`.\n\n"
-                "You must run Codex MCP verification and get a PASS verdict "
-                "BEFORE marking the step done. Follow the conductor skill's "
-                "'Codex verification (gate before marking done)' flow:\n\n"
-                "1. Read `references/codex-verify-template.md` for the prompt template\n"
-                "2. Call `mcp__codex__codex` with the step's context\n"
-                "3. Fix any findings, then call `mcp__codex__codex-reply` to re-verify\n"
+                "You must run Codex verification via `run-codex-verify.sh` and get a "
+                "PASS verdict BEFORE marking the step done:\n\n"
+                "1. Invoke `Skill(skill: 'look-before-you-leap:codex-dispatch')`\n"
+                "2. The skill runs `run-codex-verify.sh` in the background\n"
+                "3. Fix any findings, then re-run verification\n"
                 "4. Repeat until Codex reports PASS\n"
                 "5. Set the result field to include 'Codex: PASS' (or the verdict)\n"
                 "6. Then mark the step done again\n\n"
-                "If `mcp__codex__codex` is not available, note 'Codex: skipped — "
-                "MCP not configured' in the result field."
+                "If `codex` CLI is not available, note 'Codex: skipped — "
+                "codex CLI not installed' in the result field."
+            )
+        }
+    }
+    json.dump(output, sys.stdout)
+    sys.exit(0)
+
+# Receipt gate for strict plans
+if receipt_blocked_steps:
+    for sid in receipt_blocked_steps:
+        try:
+            plan_utils.update_step_status(plan_json_path, int(sid), "in_progress")
+        except Exception:
+            pass
+        marker_path = os.path.join(plan_dir, f".verify-pending-{sid}")
+        if os.path.exists(marker_path):
+            os.remove(marker_path)
+
+    blocked_display = ", ".join(f"Step {s}" for s in receipt_blocked_steps)
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": (
+                f"RECEIPT VERIFICATION REQUIRED — {blocked_display} in strict plan "
+                "requires signed verification receipts.\n\n"
+                "This step has been reverted to `in_progress`.\n\n"
+                "For claude-impl steps: run run-codex-verify.sh to get a codex_verify receipt.\n"
+                "For codex-impl steps: run run-codex-implement.sh (codex_impl receipt) + "
+                "write-claude-verify-receipt.sh (claude_verify receipt).\n\n"
+                "Use `complete-step` instead of `update-step done` for strict plans."
             )
         }
     }
@@ -306,6 +509,7 @@ output = {
         "additionalContext": (
             f"STEP VERIFICATION REQUIRED — {step_display} just marked [x] in "
             f"plan '{plan_name}'.\n\n"
+            f"{criterion_warning_text}"
             "STOP. Before proceeding to the next step, you MUST dispatch a "
             "verification sub-agent to confirm the completed step was "
             "implemented correctly and fully.\n\n"
@@ -314,8 +518,8 @@ output = {
             "```\n"
             f"Verify that {step_display} of the plan at `{plan_path}` was "
             "implemented correctly and FULLY. Do the following checks:\n\n"
-            "1. Read the step from plan.json — note its acceptanceCriteria, "
-            "files array, and progress items.\n"
+            "1. Read the step from plan.json (definition) and progress.json (state) — "
+            "note acceptanceCriteria, files array, and progress item statuses.\n"
             "2. Check `git diff --name-only` for modified tracked files AND "
             "`git status --short` for untracked new files. Every file in "
             "the step's `files` array should appear in one of these — "
@@ -327,10 +531,8 @@ output = {
             "5. Read the modified files briefly to confirm the changes match "
             "the step's description.\n\n"
             "If ALL checks pass:\n"
-            f"- Remove the verification marker(s): "
-            + " && ".join(f"rm {plan_dir}/.verify-pending-{s}" for s in step_list)
-            + "\n"
-            "- Report: 'Verification PASSED for " + step_display + "'\n\n"
+            "- Report: 'Verification PASSED for " + step_display + "'\n"
+            "- The verification markers will be cleared automatically.\n\n"
             "If ANY check fails:\n"
             "- Report exactly what is missing or incomplete\n"
             "- Do NOT remove the marker — code edits remain blocked until "
@@ -338,8 +540,7 @@ output = {
             "```\n\n"
             "Code file edits are BLOCKED until verification passes (the "
             f"enforce-plan hook checks for {markers}).\n\n"
-            f"To bypass: rm {plan_dir}/.verify-pending-* "
-            "(only if you're sure the step is fully implemented)"
+            "To bypass, ask the user to run /bypass."
         )
     }
 }

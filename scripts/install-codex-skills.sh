@@ -11,6 +11,7 @@ DST_DIR="$HOME/.codex/skills"
 MAX_DESCRIPTION_LENGTH=1024
 ORBIT_INSTALLER="$ROOT_DIR/scripts/install-orbit-codex-integration.sh"
 CLAUDE_BRIDGE_INSTALLER="$ROOT_DIR/scripts/install-claude-bridge-codex-integration.sh"
+GUARD_INSTALLER="$ROOT_DIR/scripts/install-codex-guard-integration.sh"
 
 find_orbit_dir() {
   if [ -n "${ORBIT_DIR:-}" ] && [ -d "$ORBIT_DIR" ]; then
@@ -107,6 +108,12 @@ for src_dir in "${SRC_DIRS[@]}"; do
     echo "Installed $name"
   done
 done
+
+if [ "${SKIP_CODEX_GUARD_INSTALL:-0}" = "1" ]; then
+  echo "Skipped codex-guard integration (SKIP_CODEX_GUARD_INSTALL=1)"
+else
+  bash "$GUARD_INSTALLER"
+fi
 
 if [ "${SKIP_ORBIT_INSTALL:-0}" = "1" ]; then
   echo "Skipped Orbit integration (SKIP_ORBIT_INSTALL=1)"

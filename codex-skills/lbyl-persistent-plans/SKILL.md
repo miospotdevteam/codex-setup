@@ -249,14 +249,16 @@ This is a loop. Follow it mechanically.
 ┌─ EXECUTION LOOP ────────────────────────────────────────┐
 │                                                         │
 │  1. Read plan.json from disk                            │
-│  2. Find the next pending or in_progress step           │
-│  3. Mark it in_progress — write to disk NOW             │
+│  2. Validate review/executor/claudeVerify metadata      │
+│     - if invalid: stop and repair the plan first        │
+│  3. Find the next pending or in_progress step           │
+│  4. Mark it in_progress — write to disk NOW             │
 │                                                         │
-│  4. Check the step's `executor`                         │
+│  5. Check the step's `executor`                         │
 │     - `codex`  -> implement locally                     │
 │     - `claude` -> call `claude-bridge` `frontend_implement` │
 │                                                         │
-│  5. IF step has a subPlan:                              │
+│  6. IF step has a subPlan:                              │
 │     a. Find next pending group                          │
 │     b. Execute the group                                │
 │     c. Mark group done in plan.json                     │
@@ -267,7 +269,7 @@ This is a loop. Follow it mechanically.
 │        - Only after PASS: mark step done                │
 │        - Add to completedSummary                        │
 │                                                         │
-│  6. IF step has no subPlan:                             │
+│  7. IF step has no subPlan:                             │
 │     a. Execute the step                                 │
 │     b. CHECKPOINT after every 2-3 file edits:           │
 │        - Update progress items via plan_utils.py        │
@@ -277,15 +279,45 @@ This is a loop. Follow it mechanically.
 │     e. Only after PASS: mark step done                  │
 │     f. Add to completedSummary                          │
 │                                                         │
-│  7. IF all steps are now done:                          │
+│  8. IF all steps are now done:                          │
 │     a. Run plan_utils.py complete-plan                  │
 │     b. Confirm plan moved from active/ to completed/    │
 │     c. Report completion to the user                    │
 │                                                         │
-│  8. ELSE: Loop back to step 1                           │
+│  9. ELSE: Loop back to step 1                           │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### Pre-execution validation is mandatory
+
+Before executing any step, confirm the active `plan.json` is valid:
+
+1. `review.status` exists and is `approved`, unless the user explicitly
+   skipped Orbit review
+2. if `review.status` is `skipped`, `review.skipReason` clearly records that
+   explicit user instruction
+3. every step has an explicit `executor`
+4. every step has an explicit `claudeVerify`
+5. `claudeVerify` remains `true` unless the user explicitly opted out
+
+If any of those checks fail, the plan is invalid. Do not execute from it.
+Repair the plan first, and if necessary go back through `lbyl-writing-plans`
+and Orbit review.
+
+### Guard integration
+
+If `codex-guard` is installed for the current repo, treat it as the runtime
+execution gate that wraps this plan loop:
+
+- run `python3 codex-guard/guard.py validate-plan` before the first step
+- run `python3 codex-guard/guard.py begin-step <N>` before editing a step's files
+- run `python3 codex-guard/guard.py checkpoint` every 2-3 file edits
+- run `python3 codex-guard/guard.py complete-step <N>` only after local
+  verification and the required Claude PASS verdict
+
+The plan on disk is still the source of truth; the guard simply controls which
+step is writable and whether completion is allowed.
 
 ### Never mark done without verified work
 

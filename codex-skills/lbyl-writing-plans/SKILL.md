@@ -76,11 +76,27 @@ Use the schema from `references/plan-schema.md`. This file is what Codex
 reads and updates during execution. Include:
 
 - All discovery findings in the `discovery` object
+- A top-level `review` object initialized for Orbit gating
 - Steps with TDD-granularity progress items
 - Inline sub-plans for large steps (see Step 4 below)
 - Exact skill identifiers in `skill` fields
-- Explicit `executor` routing on every step
+- Optional `routingHint` values on steps when the default Codex bias would be wrong
 - `claudeVerify: true` on every step unless the user explicitly opts out
+
+The initial `review` object must be:
+
+```json
+{
+  "status": "pending",
+  "reviewedVia": "orbit",
+  "approvedAt": null,
+  "skipReason": null
+}
+```
+
+`codex-guard validate-plan` consumes these fields directly. If review metadata
+is missing or malformed, the plan is not only process-invalid; it will also
+fail the Codex-side execution gate when the guard is installed.
 
 #### masterPlan.md — user-facing proposal (write-once)
 
@@ -164,9 +180,10 @@ Default to `false` for simple steps.
   are installed from the vendored tree, such as `immersive-frontend`,
   `react-native-mobile`, `svg-art`, `webapp-testing`, `mcp-builder`,
   `doc-coauthoring`, and `skill-review-standard`.
-- **Separate skill from executor** — `skill` is the guidance Codex follows;
-  `executor` is who should implement the step. Set `executor` explicitly on
-  every step.
+- **Separate skill from routing hint** — `skill` is the guidance Codex
+  follows. `routingHint` is only an optional nudge for the conductor. The
+  real `executor` is resolved later by the conductor and should not be treated
+  as planner-owned source of truth.
 - **Precise descriptions with file paths** — not vague "add validation" but
   specific what-to-do with exact file paths and acceptance criteria. Plans
   describe *what* to build; the executing engineer writes the code.
@@ -180,19 +197,19 @@ Default to `false` for simple steps.
 
 #### Execution-agent routing
 
-When assigning `executor`, use this rule set:
+When setting `routingHint`, use this rule set:
 
-- Set `executor: "claude"` when the step materially changes visual
-  presentation: layout, styling, spacing, typography, color, motion,
-  responsive presentation, or theme/design-token work that changes rendered
-  output.
-- Set `executor: "codex"` for copy-only UI changes, non-visual UI behavior
-  changes, backend work, refactors, tests, infra, and general coding.
-- Theme/token changes still route to Claude because they change rendered
-  presentation across consumers.
+- Omit it or set `routingHint: "auto"` for the normal case. The conductor
+  should then default to Codex.
+- Set `routingHint: "visual"` or `routingHint: "claude"` only when the step
+  materially changes visual presentation: layout, styling, spacing,
+  typography, color, motion, responsive presentation, or theme/design-token
+  work that changes rendered output.
+- Set `routingHint: "codex"` only when you need to override an otherwise
+  ambiguous step back toward Codex.
 
-Do not route a step to Claude just because it touches frontend files. If the
-change is copy-only or behavior-only, keep it on Codex.
+Do not treat touching frontend files as sufficient reason to route to Claude.
+Copy-only or behavior-only changes should still resolve to Codex.
 
 Every step should also carry `claudeVerify: true` in this repo's default
 workflow. Claude verification is a hard gate before `done`.
@@ -260,6 +277,17 @@ the setup issue instead of silently skipping review.
 - **`timeout`** → tell the user the review timed out and ask them to
   review when ready.
 
+When the review is approved, update `plan.json.review` before execution:
+
+```json
+{
+  "status": "approved",
+  "reviewedVia": "orbit",
+  "approvedAt": "<timestamp>",
+  "skipReason": null
+}
+```
+
 ### 6. Summarize and proceed (post-approval)
 
 After the plan is approved via Orbit:
@@ -312,7 +340,11 @@ This skill must NOT:
 - **Overwrite an existing plan without user consent** — if a plan already
   exists in the target directory, ask before replacing it.
 - **Skip the Orbit review** — every plan must be presented to the user
-  for review via Orbit MCP before execution.
+  for review via Orbit MCP before execution unless the user explicitly says
+  to skip review, in which case `plan.json.review.status` must be set to
+  `skipped` with a concrete `skipReason`.
+- **Allow a hand-written substitute plan** — if `lbyl-writing-plans` did not
+  generate the files, the plan is invalid and must not be executed.
 - **Pretend `masterPlan.md` is the runtime tracker** — execution state
   belongs in `plan.json`, not in the Orbit-reviewed proposal.
 - **Write implementation code** — this skill produces plans, not code files.

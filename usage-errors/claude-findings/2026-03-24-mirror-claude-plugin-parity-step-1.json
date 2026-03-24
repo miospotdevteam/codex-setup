@@ -1,0 +1,28 @@
+{
+  "plan": "mirror-claude-plugin-parity",
+  "project": "/Users/robertobortolaso/Projects/codex-setup",
+  "step": 1,
+  "stepTitle": "Refresh the vendored upstream baseline to what the Claude plugin actually does today",
+  "acceptanceCriteria": "The vendored tree reflects the current upstream source repo for parity-relevant files, obvious junk files are excluded, and the repo has a reliable local baseline for intended-vs-actual analysis.",
+  "date": "2026-03-24",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "category": "INCOMPLETE_WORK",
+      "file": ".gitignore",
+      "line": null,
+      "summary": ".DS_Store not in project .gitignore",
+      "detail": "look-before-you-leap/.DS_Store exists on disk. While it appears to be handled by a global gitignore (git status shows clean), the project .gitignore has __pycache__ and *.pyc but not .DS_Store. Adding .DS_Store to .gitignore makes the exclusion explicit and portable across machines that may not have a global gitignore.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "OTHER",
+      "file": "look-before-you-leap/scripts/__pycache__/",
+      "line": null,
+      "summary": "__pycache__ directories exist on disk in vendored tree",
+      "detail": "Three __pycache__ dirs with .pyc files exist under look-before-you-leap/. They are gitignored and won't be committed, but the acceptance criteria say 'obvious junk files are excluded.' These are excluded from git but not from the filesystem. This is cosmetic \u2014 git status is clean for them.",
+      "preventable": false
+    }
+  ]
+}

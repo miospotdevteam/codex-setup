@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces both plan.json (execution source of truth) and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Consumes discovery.md from exploration phase. Make sure to use this skill whenever the user says discovery is done, exploration is finished, discovery.md is ready, or asks to write/create/draft the implementation plan — even if they don't mention plan.json or masterPlan.md by name. Also use when the user references completed exploration findings, blast radius analysis, or consumer mappings and wants them converted into actionable steps. Do NOT use when: the user says 'just do it' or 'no plan', resuming or executing an existing plan, during exploration or brainstorming (discovery not yet complete), debugging, or code review."
+description: "Use after discovery to write implementation plans with TDD-granularity steps. Produces plan.json (immutable definition, frozen after approval), progress.json (mutable execution state), and masterPlan.md (user-facing proposal for Orbit review). Every step is one component/feature; TDD rhythm (test, verify fail, implement, verify pass, commit) lives in its progress items. Consumes discovery.md from exploration phase. Make sure to use this skill whenever the user says discovery is done, exploration is finished, discovery.md is ready, or asks to write/create/draft the implementation plan — even if they don't mention plan.json or masterPlan.md by name. Also use when the user references completed exploration findings, blast radius analysis, or consumer mappings and wants them converted into actionable steps. Do NOT use when: the user says 'just do it' or 'no plan', resuming or executing an existing plan, during exploration or brainstorming (discovery not yet complete), debugging, or code review."
 ---
 
 # Writing Plans
@@ -14,11 +14,23 @@ the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 **Announce at start:** "I'm using the writing-plans skill to create the
 implementation plan."
 
-**Prerequisite:** Discovery must be complete. If no `discovery.md` exists
-in the plan directory, go back to Step 1 (Explore) first. If discovery.md
-exists but is thin (missing blast radius counts, no consumer lists, vague
-scope), warn the user that the plan quality will suffer and recommend going
-back to enrich the discovery before continuing.
+**Prerequisite:** Discovery must be complete with verified co-exploration.
+
+**Planning gate:** Before producing a plan, verify that a signed discovery
+receipt exists for this project+plan. Check via:
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/receipt_utils.py check discovery <projectId> <planId>
+```
+If the receipt is MISSING, refuse to produce the plan and instruct the
+caller to complete discovery first (including Codex co-exploration or
+documented fallback). This gate ensures Claude cannot skip exploration
+and jump straight to planning.
+
+If no `discovery.md` exists in the plan directory, go back to Step 1
+(Explore) first. If discovery.md exists but is thin (missing blast radius
+counts, no consumer lists, vague scope), warn the user that the plan
+quality will suffer and recommend going back to enrich the discovery
+before continuing.
 
 ---
 
@@ -61,6 +73,8 @@ now — they inform how you structure the steps.
 
 | If the task involves... | Read before planning... |
 |---|---|
+| **Every plan (mandatory)** | **`references/routing-matrix.md`** (step ownership — read BEFORE Step 3) |
+| Every plan with 3+ steps | `references/scenario-playbook.md` (23-scenario ownership matrix) |
 | Writing or modifying tests | `references/testing-checklist.md` |
 | Building or modifying UI | `references/frontend-design-checklist.md` + `references/ui-consistency-checklist.md` |
 | Auth, input validation, secrets | `references/security-checklist.md` |
@@ -73,18 +87,102 @@ not planning):
 - **git-checklist.md** — applies at every commit step
 - **linting-checklist.md** — applies after any code changes
 
-### 3. Write the plan (dual output)
+### 3. Classify step ownership (mandatory — before writing JSON)
+
+**This step is the #1 defense against all-claude-impl plans.** You MUST
+complete this before writing plan.json. If you skip this, every step
+defaults to `claude-impl` and Codex is reduced to a verification-only
+role — wasting its implementation capacity on mechanical tasks it could
+own.
+
+Read `references/routing-matrix.md` now (you should have already read it
+in Step 2). For each step you plan to create, classify it against the
+routing matrix task categories.
+
+#### Produce a routing classification table
+
+Before writing any JSON, write out this table (in your response, not in
+a file) for every step:
+
+| Step | Title | Category Match | Owner | Mode | Justification |
+|---|---|---|---|---|---|
+| 1 | "Add user CRUD endpoints" | Backend from clear spec | codex | codex-impl | Straightforward CRUD, no external integration |
+| 2 | "Build user profile UI" | Frontend UI / visual design | claude | claude-impl | Requires visual taste |
+| 3 | "Rename UserRole across codebase" | Refactor across many files | codex | codex-impl | Mechanical rename, 15 files |
+| 4 | "Write API integration tests" | Test writing | codex | codex-impl | Gets TDD skill injection |
+
+This table is the auditable artifact that proves routing was considered.
+Copy each row's justification into the step's `routingJustification`
+field in plan.json.
+
+#### Aggressive Codex routing — the default stance
+
+The routing matrix defaults most task types to `codex-impl`. Claude keeps
+only: frontend UI / visual design, creative / marketing, product copy,
+documentation, and security-sensitive design. **Everything mechanical goes
+to Codex**: backend, refactoring, testing, debugging, CI/CD, performance,
+i18n, migrations, dependency upgrades.
+
+When classifying steps, start by asking: "Does this step require visual
+taste, creative judgment, or direct user interaction?" If no, it likely
+belongs to Codex.
+
+#### Anti-pattern: all-claude-impl plans
+
+**If every step in a multi-step plan (3+ steps) ends up as `claude-impl`,
+re-read the routing matrix — this is almost certainly wrong.** Mechanical
+sweeps, file-wide refactoring, test writing, CI setup, and verification
+steps should route to Codex. The only valid all-claude-impl plan is one
+where every step requires visual taste, creative judgment, or user
+interaction — and even then, test-writing sub-steps should still route
+to Codex.
+
+#### Classification rules
+
+1. For each step, identify its **primary task category** from the routing
+   matrix table (e.g., "Backend from clear spec", "Frontend UI", "Refactor
+   across many files")
+2. Read the **Default Owner** and **Default Mode** columns
+3. Check the **Override Conditions** — if any apply, use the override
+4. Check **skill injection rules** — if the step needs a Claude-only
+   skill (`frontend-design`, `svg-art`, `immersive-frontend`,
+   `react-native-mobile`, `brainstorming`, `doc-coauthoring`), it MUST
+   stay `owner: "claude"` regardless of routing matrix
+5. Set `owner`, `mode`, and `routingJustification` on the step
+
+**The `routingJustification` field is required on every step.** Format:
+`"<category match> → <owner>-<mode> [reason if override]"`. Examples:
+- `"Frontend UI / visual design → claude-impl"`
+- `"Refactor across many files → codex-impl"`
+- `"Backend from clear spec → claude-impl (override: needs MCP tool reasoning)"`
+
+#### Dynamic routing
+
+Some steps can't determine ownership at plan time:
+
+- **Performance optimization**: Investigation step is `owner: "codex"`,
+  `mode: "codex-impl"`. Fix steps default to `owner: "claude"` with a
+  note that ownership will be reassigned after investigation.
+- **Vague requests**: Clarification step is `owner: "claude"`,
+  `mode: "claude-impl"`. Subsequent steps assigned normally after
+  requirements are concrete.
+
+See `references/scenario-playbook.md` for the complete 23-scenario
+ownership matrix with collaboration modes and verification rules.
+
+### 4. Write the plan (dual output)
 
 Produce **both** files in `.temp/plan-mode/active/<plan-name>/`:
 
-#### plan.json — execution source of truth
+#### plan.json — immutable plan definition
 
-Use the schema from `references/plan-schema.md`. This file is what hooks
-read and what Claude updates during execution. Include:
+Use the schema from `references/plan-schema.md`. This file is frozen after
+Orbit approval. Hooks read it for step structure; mutable state (statuses,
+results) lives in `progress.json` (auto-created by plan_utils.py). Include:
 
 - All discovery findings in the `discovery` object
 - Steps with TDD-granularity progress items
-- Inline sub-plans for large steps (see Step 4 below)
+- Inline sub-plans for large steps (see Step 5 below)
 - Exact skill identifiers in `skill` fields
 
 **Use dep maps to populate step `files` arrays.** If dep maps are
@@ -102,10 +200,24 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/deps-query.py 
 
 This is the document the user reviews via Orbit. It communicates **intent**,
 not execution state. **It is frozen after Orbit approval** — never updated
-during execution. All runtime state lives in plan.json.
+during execution. All runtime state lives in progress.json (updated
+via plan_utils.py). plan.json is also immutable after approval.
 
 Use the template from `references/master-plan-format.md`. No `[x]`/`[ ]`
 checkboxes. No execution state. Just what, why, and what could go wrong.
+
+#### progress.json — initialize after plan creation
+
+After writing plan.json, create progress.json with all steps in `pending`
+state:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/look-before-you-leap/scripts/plan_utils.py init-progress <plan.json>
+```
+
+This creates the mutable state file that tracks execution progress.
+plan.json becomes immutable after Orbit approval; all runtime updates
+go to progress.json via plan_utils.py commands.
 
 #### Step granularity: how steps map to TDD
 
@@ -123,6 +235,8 @@ specific behavior, then implements just enough to pass.
   "id": 1,
   "title": "Email validation utility",
   "status": "pending",
+  "owner": "claude",
+  "mode": "claude-impl",
   "skill": "look-before-you-leap:test-driven-development",
   "simplify": false,
   "codexVerify": true,
@@ -139,7 +253,8 @@ specific behavior, then implements just enough to pass.
     {"task": "Refactor and final verification", "status": "pending", "files": ["src/lib/validate-email.ts", "tests/lib/validate-email.test.ts"]}
   ],
   "subPlan": null,
-  "result": null
+  "result": null,
+  "routingJustification": "Frontend UI / visual design → claude-impl"
 }
 ```
 
@@ -184,6 +299,28 @@ executor knows which guidance to follow.
 testable behavior. TDD is the default for new logic — only use `"none"`
 when the step has nothing to test (config files, wiring, migrations).
 
+#### Apply step ownership from routing classification
+
+Use the routing classification table you produced in Step 3. For each
+step, set `owner`, `mode`, and `routingJustification` from that table.
+If you haven't done Step 3 yet, go back — do NOT assign ownership while
+writing JSON.
+
+**Skill injection rules for Codex-owned steps:**
+
+When `owner: "codex"`, the step's `skill` field determines what guidance
+Codex receives in its prompt (via `{step.skill.content}` in the implement
+template). These skills CAN be injected into Codex:
+- `test-driven-development`, `refactoring`, `systematic-debugging`,
+  `webapp-testing`, `mcp-builder`
+
+These skills stay Claude-only and MUST NOT have `owner: "codex"`:
+- `frontend-design`, `svg-art`, `immersive-frontend`, `react-native-mobile`,
+  `brainstorming`, `writing-plans`, `doc-coauthoring`
+
+If a step needs a Claude-only skill, its owner MUST be `"claude"` regardless
+of what the routing matrix says. This is a hard constraint.
+
 #### When to set `simplify: true`
 
 Set `simplify: true` on a step when any of these apply:
@@ -212,21 +349,21 @@ to see: inconsistencies, missing edge cases, unclear code, broken patterns.
 Default to `false` for backend logic, config changes, and steps already
 covered by automated tests.
 
-#### `codexVerify` — default to `true` on every step
+#### `codexVerify` — always `true`, no exceptions
 
-**Set `codexVerify: true` on every step by default.** Codex runs as an
-independent MCP agent (GPT-5.4 with its own engineering discipline plugin)
-that independently verifies the diff against the step's acceptance criteria,
-runs the project's type checker and tests, and checks consumer integrity
-via dep maps. It catches issues Claude might miss due to compaction or
-tunnel vision — bugs found early are cheap to fix.
+**Set `codexVerify: true` on every step. No exceptions. No mode-based
+exemptions.** Codex verification is structural — every step gets verified
+by the other agent, regardless of mode. Codex runs as an independent agent
+with its own engineering discipline plugin that independently verifies the
+diff against the step's acceptance criteria, runs the project's type
+checker and tests, and checks consumer integrity via dep maps. It catches
+issues Claude might miss due to compaction or tunnel vision.
 
-Only set `codexVerify: false` when the user explicitly opts out, or when
-the Codex MCP server is known to be unavailable. If unavailable at
-runtime, Codex verification is skipped gracefully.
+If the `codex` CLI is unavailable at runtime, Codex verification is
+skipped gracefully (noted under `### Verdict` in the structured result).
 
-See `references/codex-verify-template.md` for the prompt templates used
-in the MCP call.
+Codex verification uses `run-codex-verify.sh` (direction-locked). See
+the `codex-dispatch` skill for the full flow.
 
 #### Key rules
 
@@ -245,7 +382,7 @@ in the MCP call.
 - **DRY / YAGNI** — cut anything not clearly needed right now
 - **Frequent commits** — after every green test or logical unit of work
 
-### 4. Evaluate sub-plan needs (mandatory checkpoint)
+### 5. Evaluate sub-plan needs (mandatory checkpoint)
 
 **Before saving the plan, evaluate EVERY step against these criteria:**
 
@@ -269,8 +406,8 @@ If ANY criterion is met, restructure the step NOW:
 {
   "subPlan": {
     "groups": [
-      {"name": "Dashboard pages", "files": ["a.tsx", "b.tsx", "c.tsx"], "status": "pending", "notes": null},
-      {"name": "Modal components", "files": ["d.tsx", "e.tsx"], "status": "pending", "notes": null}
+      {"name": "Dashboard pages", "owner": "claude", "files": ["a.tsx", "b.tsx", "c.tsx"]},
+      {"name": "Modal components", "owner": "codex", "files": ["d.tsx", "e.tsx"]}
     ]
   }
 }
@@ -278,14 +415,67 @@ If ANY criterion is met, restructure the step NOW:
 
 Groups should have 3-8 files each. If a group exceeds 8, split it.
 
-**This is a hard checkpoint.** Do not proceed to Step 5 until every step
+#### Group ownership for collab-split steps
+
+When the step's `mode` is `"collab-split"`, each group MUST have an
+`owner` field. Classify each group against the routing matrix the same
+way you classified steps in Step 3:
+
+1. For each group, identify its primary task category from the routing
+   matrix (e.g., "Frontend UI", "Backend from clear spec", "Refactor")
+2. Set `owner` to `"claude"` or `"codex"` based on the routing matrix
+3. The executor dispatches each group to the correct agent based on
+   `group.owner` — Claude-owned groups get Codex verification,
+   Codex-owned groups get Claude verification
+
+For non-collab-split steps, `group.owner` is optional and defaults to
+the parent step's `owner`. But for collab-split steps, making ownership
+explicit on every group prevents the failure mode where Claude implements
+all groups (including Codex-owned ones) because ownership was only hinted
+in group names, not enforced by schema.
+
+**Progress item naming**: include the owner designation for readability:
+`"Group 3 (Codex): Account hooks"`. But the formal `owner` field on
+the group object is what the executor reads — the name is informational.
+
+**This is a hard checkpoint.** Do not proceed to Step 6 until every step
 has been evaluated. If you skip this, large steps will fail mid-execution
 when context runs out.
 
-### 5. Present for review via Orbit
+### 6. Plan consensus with Codex (before Orbit)
 
-After saving both files to disk, present masterPlan.md to the user for
-interactive review using the Orbit MCP:
+After saving both files to disk, run the plan consensus protocol with
+Codex before presenting to the user. Both agents must agree on the plan.
+
+**Round 1 — Codex reviews:**
+
+```bash
+codex exec -C <project-root> --dangerously-bypass-approvals-and-sandbox \
+  "Read the plan at <plan-dir>/masterPlan.md and <plan.json>. \
+   For EACH step, return a structured proposal: \
+   - ACCEPT: step is well-sized, criteria are concrete, ownership is correct \
+   - REJECT <reason>: step should be removed or fundamentally rethought \
+   - MODIFY <changes>: step needs specific changes (sizing, criteria, ownership, ordering) \
+   Also flag: missing steps, wrong ordering, vague acceptance criteria, \
+   ownership assignments that contradict the routing matrix."
+```
+
+**Round 2 — Claude responds** to each proposal (ACCEPT / REJECT with
+reasoning / COUNTER-PROPOSE). Update plan files with accepted changes.
+
+**Round 3 (if needed)** — Codex reviews remaining disagreements. Either
+accepts Claude's reasoning or escalates with both positions stated.
+
+**Max 3 rounds.** Unresolved items go to Orbit with both positions clearly
+stated so the user can decide.
+
+If `codex` CLI is not available, skip consensus and proceed to Orbit.
+
+### 7. Present for review via Orbit
+
+After plan consensus (or directly after saving if Codex is unavailable),
+present masterPlan.md to the user for interactive review using the Orbit
+MCP:
 
 1. Discover the Orbit tool: `ToolSearch query: "+orbit await_review"`
 2. Tell the user: *"The plan is open in VS Code for review. Add inline
@@ -298,9 +488,9 @@ interactive review using the Orbit MCP:
 
 `orbit_await_review` returns JSON with `status` and `threads`.
 
-- **`approved`, no threads** → proceed to step 6 (plan mode handoff).
+- **`approved`, no threads** → proceed to step 8 (plan mode handoff).
 - **`approved`, with threads** → read each thread, reply as `agent`
-  acknowledging the feedback, resolve threads, then proceed to step 6.
+  acknowledging the feedback, resolve threads, then proceed to step 8.
 - **`changes_requested`** → read all threads. Update both masterPlan.md
   and plan.json to address the feedback. Reply to each thread explaining
   what changed. Resolve threads. Call `orbit_await_review` again for
@@ -308,7 +498,7 @@ interactive review using the Orbit MCP:
 - **`timeout`** → tell the user the review timed out and ask them to
   review when ready.
 
-### 6. Plan mode handoff (post-approval)
+### 8. Plan mode handoff (post-approval)
 
 After the plan is approved via Orbit:
 
@@ -316,10 +506,31 @@ After the plan is approved via Orbit:
    The handoff marker (`.handoff-pending`) is auto-cleared by a hook when
    `EnterPlanMode` is called or when `orbit_await_review` returns approved.
 2. Read the plan.json you just wrote from disk.
-3. Write a summary to the **plan mode scratch pad** (the file path is
-   specified in the plan mode system message — it is NOT masterPlan.md and
-   NOT plan.json). Include: the key steps, files involved, and acceptance
-   criteria — enough for the user to approve or reject.
+3. Write a **minimal** summary to the **plan mode scratch pad** (the file
+   path is specified in the plan mode system message — it is NOT
+   masterPlan.md and NOT plan.json). Use this exact format:
+
+   ```
+   # Plan: <title from plan.json>
+   Path: <absolute path to plan.json>
+   Steps: <N> total
+   Context: <plan.json.context — one or two sentences>
+
+   Read plan.json at the path above to begin execution.
+   ```
+
+   **Do NOT include**: step descriptions, acceptance criteria, file lists,
+   Codex consensus results, exploration findings, implementation details,
+   transcript references, or any other content. All of that lives on disk
+   already. The session-start hook and resumption protocol handle
+   everything — the scratch pad is a pointer, not a copy.
+
+   **Why this matters**: the scratch pad becomes the initial prompt in the
+   new session. If it's too large or contains mixed instructions (implement
+   + handle consensus + read transcript), Claude gets confused and acts
+   erratically — editing code while simultaneously outputting stale Codex
+   feedback. Keep it minimal.
+
 4. Call `ExitPlanMode` to present the plan to the user.
 
 This gives the user the built-in **"autoaccept edits and clear context?"**
@@ -333,9 +544,10 @@ conductor's Step 3 with engineering-discipline.
 
 If the user changes requirements during planning (before Orbit approval),
 update BOTH plan.json and masterPlan.md to reflect the new scope. If the
-user changes requirements AFTER Orbit approval (during execution), update
-only plan.json — masterPlan.md is frozen. Record the deviation in
-plan.json's `deviations` array so the change is visible after compaction.
+user changes requirements AFTER Orbit approval (during execution),
+masterPlan.md is frozen and plan.json is immutable. Record the deviation
+via `plan_utils.py add-deviation` (writes to progress.json) so the
+change is visible after compaction.
 
 If a plan already exists in the target directory and you're asked to
 rewrite it, read the existing plan first to understand what changed. Do
@@ -358,7 +570,8 @@ This skill must NOT:
 - **Skip the plan mode handoff** — after Orbit approval, every plan must
   go through plan mode handoff before execution begins.
 - **Write implementation code** — this skill produces plans, not code files.
-- **Skip the sub-plan evaluation** — Step 4 is mandatory for every plan.
+- **Skip the routing classification** — Step 3 is mandatory for every plan.
+- **Skip the sub-plan evaluation** — Step 5 is mandatory for every plan.
 
 **Autonomy limits**: reading discovery, reading checklists, writing plan
 files, and writing sub-plans are autonomous. Overwriting an existing plan
@@ -380,7 +593,7 @@ directory).
 - **Precise descriptions** — never write vague "add error handling"; specify
   exactly what to do, which files, and how to verify. Plans describe intent;
   the executing engineer writes the code.
-- **masterPlan.md is write-once** — frozen after Orbit approval. All runtime
-  state lives in plan.json
+- **masterPlan.md is write-once** — frozen after Orbit approval. plan.json
+  is also immutable. All runtime state lives in progress.json
 - **DRY / YAGNI** — only what's needed now, nothing speculative
 - **Sub-plans are mandatory** — if a step meets the criteria, it gets one

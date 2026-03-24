@@ -73,11 +73,13 @@ already-written plan.
 
 ### First-run onboarding
 
-Codex has no Claude-style plugin lifecycle hooks. If project-specific defaults
-are useful, create a local `AGENTS.md`, initialize `.temp/plan-mode/`, and
-document any dep-map config explicitly. GPT-5.4 responds well to direct
-operating rules, so prefer concise requirements, exact commands, and explicit
-acceptance criteria over long motivational framing.
+Codex has no Claude-style plugin lifecycle hooks, but this repo can install a
+Codex-native guard through `codex-guard/guard.py` and a `[sandbox].setup`
+entry in `~/.codex/config.toml`. If project-specific defaults are useful,
+create a local `AGENTS.md`, initialize `.temp/plan-mode/`, document any
+dep-map config explicitly, and make sure the installed guard path matches the
+actual checkout. GPT-5.4 responds well to direct operating rules, exact
+commands, and explicit acceptance criteria over long motivational framing.
 
 ### Skill feedback logging
 
@@ -177,7 +179,21 @@ from zero.
 
 ## Step 2: Plan (write to disk before editing code)
 
-**Invoke `lbyl-writing-plans`** to produce the plan.
+**You MUST invoke `lbyl-writing-plans` to produce the plan. Do NOT hand-write
+`plan.json` or `masterPlan.md` as a substitute.**
+
+A plan is invalid for execution if any of these are true:
+
+- `plan.json` and `masterPlan.md` were hand-written instead of produced through
+  `lbyl-writing-plans`
+- the plan lacks the required `review` metadata
+- `review.status` is not `approved` and the user did not explicitly skip Orbit
+  review
+- any step sets `claudeVerify: false` without an explicit user opt-out
+
+If the plan is invalid, stop, repair the plan path first, and only then
+continue to execution.
+
 The skill consumes your discovery.md, identifies applicable discipline
 checklists, structures TDD-granularity steps, and writes both:
 - `plan.json` — execution source of truth (Codex reads and updates this during execution)
@@ -204,6 +220,13 @@ the flow is:
 3. Once approved, summarize the plan for the user and proceed unless they
    explicitly ask for more changes or to stop after planning
 
+Record the Orbit result back into `plan.json.review` before execution:
+
+- `status: "approved"`
+- `reviewedVia: "orbit"`
+- `approvedAt: <timestamp>`
+- `skipReason: null`
+
 After approval, the default is to **continue through implementation**. Do
 not stop for another approval just because execution uncovers adjacent
 in-scope follow-through. Update plan.json and keep going unless the newly
@@ -214,7 +237,8 @@ setup problem to surface explicitly to the user. Do not silently fall back
 to a weaker manual review flow.
 
 Exception: the user explicitly says "just do it" or "no plan" for a trivially
-obvious single-line change.
+obvious single-line change. In that case, record `review.status: "skipped"`
+with a concrete `skipReason` tied to the user's instruction.
 
 ---
 
@@ -242,12 +266,29 @@ verifies against the contract and regenerates stale dep maps.
 The sections below cover behavior that is unique to the conductor and not
 covered in the companion skills.
 
+### Invalid plan gate
+
+Before marking any step `in_progress`, validate the active `plan.json`.
+Execution must stop if any of these are true:
+
+- `review.status` is missing
+- `review.status` is `pending`
+- `review.status` is `skipped` but there is no explicit user instruction to
+  skip Orbit review
+- any step has `claudeVerify` missing
+- any step has `claudeVerify: false` without an explicit user opt-out
+
+If the plan fails validation, do not keep coding and do not "fix it later."
+Repair the plan first, then resume execution.
+
 ### Execution routing
 
-`skill` and `executor` are separate in this repo's plan format:
+`skill` and `executor` are still separate in this repo's execution format, but
+`executor` is conductor-owned output rather than planner-authored input:
 
 - `skill` = which guidance Codex should follow
-- `executor` = who should perform the implementation work
+- `routingHint` = optional planner hint (`auto`, `codex`, `claude`, `visual`)
+- `executor` = who the conductor resolved to perform the implementation work
 
 Execution rules:
 
@@ -258,9 +299,31 @@ Execution rules:
 - Brainstorming uses the live Claude path via `claude-bridge`
   `brainstorm_start` and `brainstorm_status`, not the headless worker path.
 
-Do not infer executor from `skill` alone. Theme/token work and other
-materially visual presentation changes should route to Claude even if the
-rest of the feature is ordinary engineering work.
+The planner may provide `routingHint`, but the conductor resolves the final
+executor before execution. The default bias is Codex. Route to Claude only
+for materially visual work such as layout, styling, spacing, typography,
+color, motion, responsive presentation, or theme/token changes that alter
+rendered output.
+
+### Guarded execution
+
+If `codex-guard` is installed for the repo, execution should use it as the
+hard-default gate:
+
+1. `python3 codex-guard/guard.py validate-plan`
+2. `python3 codex-guard/guard.py begin-step <N>`
+3. edit only the unlocked step files
+4. `python3 codex-guard/guard.py checkpoint` every 2-3 file edits
+5. after local verification and Claude PASS, `python3 codex-guard/guard.py complete-step <N>`
+
+This is the Codex-native analogue for the Claude plugin's hook-time write
+gates. It is not identical to hooks, but it preserves the same intent:
+validated plans, explicit step ownership, and a completion gate that depends
+on real verification.
+
+`validate-plan` is also the routing checkpoint: it runs the conductor's
+executor resolver and stamps each step with conductor-owned routing metadata
+before execution can proceed.
 
 ### Dispatching sub-agents
 

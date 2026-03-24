@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from typing import Any
@@ -12,6 +13,14 @@ from __init__ import BRIDGE_NAME, BRIDGE_VERSION
 from session_manager import ClaudeBridgeError, SessionManager
 
 DEFAULT_PROTOCOL_VERSION = "2024-11-05"
+DEBUG_LOG_PATH = os.environ.get("CLAUDE_BRIDGE_DEBUG_LOG")
+
+
+def debug_log(message: str) -> None:
+    if not DEBUG_LOG_PATH:
+        return
+    with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as handle:
+        handle.write(message + "\n")
 
 
 def brainstorm_start_schema() -> dict[str, Any]:
@@ -147,6 +156,7 @@ def read_message() -> dict[str, Any] | None:
     while True:
         line = sys.stdin.buffer.readline()
         if not line:
+            debug_log("stdin-eof")
             return None
         if line in (b"\r\n", b"\n"):
             break
@@ -157,8 +167,11 @@ def read_message() -> dict[str, Any] | None:
         return None
     body = sys.stdin.buffer.read(length)
     if not body:
+        debug_log("stdin-empty-body")
         return None
-    return json.loads(body.decode("utf-8"))
+    message = json.loads(body.decode("utf-8"))
+    debug_log(f"recv method={message.get('method')} id={message.get('id')}")
+    return message
 
 
 def write_message(payload: dict[str, Any]) -> None:
@@ -167,6 +180,11 @@ def write_message(payload: dict[str, Any]) -> None:
     sys.stdout.buffer.write(header)
     sys.stdout.buffer.write(body)
     sys.stdout.buffer.flush()
+    debug_log(
+        "send "
+        + ("result" if "result" in payload else "error")
+        + f" id={payload.get('id')}"
+    )
 
 
 def ok_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
@@ -196,16 +214,25 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             message_id,
             {
                 "protocolVersion": protocol_version,
-                "capabilities": {"tools": {}},
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"subscribe": False, "listChanged": False},
+                },
                 "serverInfo": {"name": BRIDGE_NAME, "version": BRIDGE_VERSION},
             },
         )
     if method == "notifications/initialized":
         return None
+    if method == "notifications/cancelled":
+        return None
     if method == "ping":
         return ok_response(message_id, {})
     if method == "tools/list":
-        return ok_response(message_id, {"tools": TOOLS})
+        return ok_response(message_id, {"tools": TOOLS, "nextCursor": None})
+    if method == "resources/list":
+        return ok_response(message_id, {"resources": [], "nextCursor": None})
+    if method == "resources/templates/list":
+        return ok_response(message_id, {"resourceTemplates": [], "nextCursor": None})
     if method == "tools/call":
         name = params.get("name")
         arguments = params.get("arguments") or {}
@@ -242,9 +269,12 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def main() -> int:
+    debug_log("server-start")
+    print("claude-bridge MCP server running on stdio", file=sys.stderr, flush=True)
     while True:
         request = read_message()
         if request is None:
+            debug_log("server-stop")
             return 0
         response = handle_request(request)
         if response is not None:

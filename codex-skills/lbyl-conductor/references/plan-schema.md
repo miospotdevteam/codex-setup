@@ -20,6 +20,12 @@ document — it does NOT contain execution state.
   "status": "active",
   "requiredSkills": ["lbyl-frontend-design"],
   "disciplines": ["testing-checklist.md", "security-checklist.md"],
+  "review": {
+    "status": "pending",
+    "reviewedVia": "orbit",
+    "approvedAt": null,
+    "skipReason": null
+  },
   "discovery": {
     "scope": "Files/directories in scope. Be explicit about boundaries.",
     "entryPoints": "Primary files to modify and their current state.",
@@ -36,7 +42,11 @@ document — it does NOT contain execution state.
       "title": "Step title",
       "status": "pending",
       "skill": "none",
+      "routingHint": "auto",
       "executor": "codex",
+      "routingReason": "auto-routed to Codex because default Codex bias for non-visual engineering work",
+      "routingResolvedAt": "2026-03-24T00:00:00+00:00",
+      "routingResolvedBy": "lbyl-conductor",
       "claudeVerify": true,
       "simplify": false,
       "files": ["src/foo.ts", "src/bar.ts"],
@@ -54,7 +64,11 @@ document — it does NOT contain execution state.
       "title": "Large sweep step",
       "status": "pending",
       "skill": "none",
+      "routingHint": "visual",
       "executor": "claude",
+      "routingReason": "routingHint 'visual' explicitly requested Claude ownership",
+      "routingResolvedAt": "2026-03-24T00:00:00+00:00",
+      "routingResolvedBy": "lbyl-conductor",
       "claudeVerify": true,
       "simplify": false,
       "files": ["a.tsx", "b.tsx", "c.tsx", "d.tsx"],
@@ -91,11 +105,21 @@ document — it does NOT contain execution state.
 | `status` | string | yes | `"active"` or `"completed"` |
 | `requiredSkills` | string[] | yes | Exact skill identifiers (empty array if none) |
 | `disciplines` | string[] | yes | Checklist filenames that apply |
+| `review` | object | yes | Orbit review state for execution gating |
 | `discovery` | object | yes | All 8 exploration sections |
 | `steps` | Step[] | yes | Ordered list of execution steps |
 | `blocked` | string[] | yes | Blocked step descriptions (empty if none) |
 | `completedSummary` | string[] | yes | Running log of completed steps |
 | `deviations` | string[] | yes | Where execution diverged from the approved baseline in masterPlan.md |
+
+### Review fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | yes | `pending`, `approved`, or `skipped` |
+| `reviewedVia` | string | yes | Usually `orbit` |
+| `approvedAt` | string/null | yes | Approval timestamp, null before approval |
+| `skipReason` | string/null | yes | Required when `status` is `skipped` |
 
 ### Step fields
 
@@ -105,7 +129,11 @@ document — it does NOT contain execution state.
 | `title` | string | yes | Step title |
 | `status` | string | yes | One of: `pending`, `in_progress`, `done`, `blocked` |
 | `skill` | string | yes | Skill to invoke, or `"none"` |
-| `executor` | string | yes | Who implements the step: `codex` or `claude` |
+| `routingHint` | string | no | Optional planner hint: `auto`, `codex`, `claude`, or `visual` |
+| `executor` | string | yes | Conductor-resolved implementation owner: `codex` or `claude` |
+| `routingReason` | string | yes | Why the conductor chose the executor |
+| `routingResolvedAt` | string | yes | Timestamp when the conductor resolved routing |
+| `routingResolvedBy` | string | yes | Always `lbyl-conductor` in the Codex workflow |
 | `claudeVerify` | boolean | yes | Whether Claude verification is a hard pre-`done` gate |
 | `simplify` | boolean | yes | Whether to run simplification after step |
 | `files` | string[] | yes | Files involved in this step |
@@ -154,31 +182,51 @@ Steps, progress items, and groups all use the same status values:
 `skill` and `executor` are separate on purpose:
 
 - `skill` says which guidance Codex should follow.
-- `executor` says who should implement the step.
+- `routingHint` optionally nudges the conductor.
+- `executor` is the conductor's resolved output, not planner-authored source of truth.
 
-Use `executor: "claude"` when the step materially changes rendered
-presentation:
+The routing rules are:
 
-- layout
-- styling
-- spacing
-- typography
-- color
-- motion
-- responsive presentation
-- theme or design-token work that changes rendered output
+- default to Codex for non-visual engineering work
+- route to Claude when the step materially changes rendered
+  presentation:
+- allow explicit overrides via `routingHint: "codex"`, `routingHint: "claude"`, or `routingHint: "visual"`
 
-Use `executor: "codex"` for:
-
-- copy-only UI changes
-- non-visual behavior changes
-- backend work
-- refactors, infra, tests, and general coding
+The planner should not hand-decide the real executor. `codex-guard
+validate-plan` runs the conductor resolver and stamps `executor`,
+`routingReason`, `routingResolvedAt`, and `routingResolvedBy` before
+execution begins.
 
 In this repo's workflow, `claudeVerify` defaults to `true` on every step.
 Treat it as a hard gate: do not mark a step `done` until `claude-bridge`
 verification returns `PASS`. If the bridge is unavailable, stop and surface
 the setup failure.
+
+## Review gating rules
+
+`review` is not decorative metadata. It is the execution gate.
+
+- `review.status: "pending"` means execution must not start.
+- `review.status: "approved"` means Orbit review completed and execution may
+  proceed.
+- `review.status: "skipped"` is valid only when the user explicitly instructed
+  Codex to skip Orbit review; record that instruction in `skipReason`.
+
+If `review` is missing, treat the plan as invalid and repair it before
+execution.
+
+When `codex-guard` is installed, `guard.py validate-plan` consumes these
+fields directly before any step can be unlocked.
+
+## Guard interaction
+
+`step.files` is also the Codex-side write scope when `codex-guard` is
+installed:
+
+- `begin-step <N>` unlocks only the listed files
+- `complete-step <N>` audits writable tracked files outside that list
+- `claudeVerify` determines whether a recorded Claude PASS verdict is required
+  before the guard will allow completion
 
 ## Updating plan.json
 

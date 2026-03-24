@@ -38,6 +38,7 @@ Upstream skills also shipped from this repo:
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
+- If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Serialize `plan_utils.py` writes; never update the same `plan.json` in parallel.
@@ -64,5 +65,6 @@ installed directly from `look-before-you-leap/skills/`. `immersive-frontend`
 remains installed as the separate motion-heavy frontend skill. For
 multi-machine use, prefer `scripts/bootstrap-codex-skills-from-github.sh` so
 each machine clones or pulls the GitHub repo and then runs the local installer.
-The installer also configures `claude-bridge` globally for Codex unless
+The installer also configures `codex-guard` globally for Codex unless
+`SKIP_CODEX_GUARD_INSTALL=1` is set, and configures `claude-bridge` unless
 `SKIP_CLAUDE_BRIDGE_INSTALL=1` is set.

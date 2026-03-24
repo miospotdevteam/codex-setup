@@ -317,7 +317,20 @@ class SessionManager:
             prompt=prompt,
             schema=self.load_schema("verify-step.json"),
             allow_edits=False,
-            plugin_dir=self.resolve_plugin_dir(args.get("pluginDir")),
+            plugin_dir=None,
+            disable_slash_commands=True,
+            allowed_tools=[
+                "Read",
+                "Grep",
+                "Glob",
+                "LS",
+                "Bash(git status:*)",
+                "Bash(git diff:*)",
+                "Bash(find:*)",
+                "Bash(bash -n:*)",
+                "Bash(python3 -m py_compile:*)",
+                "Bash(python3 -m unittest:*)",
+            ],
         )
         self._validate_findings(result)
         findings_path: str | None = None
@@ -378,6 +391,9 @@ class SessionManager:
         schema: dict[str, Any],
         allow_edits: bool,
         plugin_dir: str | None,
+        bare_mode: bool = False,
+        disable_slash_commands: bool = False,
+        allowed_tools: list[str] | None = None,
     ) -> dict[str, Any]:
         claude_cmd = self.resolve_claude_command()
         record.rounds += 1
@@ -398,6 +414,12 @@ class SessionManager:
             "--add-dir",
             str(cwd),
         ]
+        if bare_mode:
+            cmd.append("--bare")
+        if disable_slash_commands:
+            cmd.append("--disable-slash-commands")
+        if allowed_tools:
+            cmd.extend(["--allowedTools", ",".join(allowed_tools)])
         if plugin_dir:
             cmd.extend(["--plugin-dir", plugin_dir])
         if record.claude_session_id:
@@ -421,6 +443,7 @@ class SessionManager:
         assert process.stderr is not None
 
         result_event: dict[str, Any] | None = None
+        candidate_payloads: list[dict[str, Any]] = []
         with raw_path.open("w", encoding="utf-8") as raw_handle:
             for line in process.stdout:
                 raw_handle.write(line)
@@ -437,6 +460,9 @@ class SessionManager:
                     if session_id:
                         record.claude_session_id = session_id
                     result_event = event
+                candidate = self._extract_candidate_payload(event)
+                if candidate is not None:
+                    candidate_payloads.append(candidate)
 
         stderr_text = process.stderr.read()
         try:
@@ -460,15 +486,50 @@ class SessionManager:
                 message = f"{message}\n{stderr_text.strip()}".strip()
             raise ClaudeBridgeError(self._normalize_error(message))
 
+        structured_output = result_event.get("structured_output")
+        if isinstance(structured_output, dict):
+            return structured_output
+
         payload_text = (result_event.get("result") or "").strip()
         if not payload_text:
+            if candidate_payloads:
+                return candidate_payloads[-1]
             raise ClaudeBridgeError("Claude returned an empty structured response.")
         try:
             return self._parse_json_payload(payload_text)
         except json.JSONDecodeError as exc:
+            if candidate_payloads:
+                return candidate_payloads[-1]
             raise ClaudeBridgeError(
                 "Claude returned invalid JSON despite the requested schema."
             ) from exc
+
+    def _extract_candidate_payload(self, event: dict[str, Any]) -> dict[str, Any] | None:
+        message = event.get("message")
+        if not isinstance(message, dict):
+            return None
+
+        content = message.get("content")
+        if not isinstance(content, list):
+            return None
+
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "tool_use" and item.get("name") == "StructuredOutput":
+                payload = item.get("input")
+                if isinstance(payload, dict):
+                    return payload
+            if item.get("type") == "text":
+                text = item.get("text")
+                if not isinstance(text, str):
+                    continue
+                try:
+                    return self._parse_json_payload(text)
+                except json.JSONDecodeError:
+                    continue
+
+        return None
 
     def _normalize_error(self, message: str) -> str:
         if "Not logged in" in message or "/login" in message:

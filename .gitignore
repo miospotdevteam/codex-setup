@@ -6,5 +6,7 @@ refactoring-workspace
 claude-bridge-vscode/node_modules/
 claude-bridge-vscode/out/
 claude-bridge-vscode/*.vsix
+claude-bridge/node_modules/
 __pycache__/
 *.pyc
+.DS_Store

@@ -55,6 +55,12 @@ upstream-only skills such as `doc-coauthoring`, `mcp-builder`, `svg-art`, and
 `webapp-testing` are installed directly from the vendored upstream tree. The
 `lbyl-*` skills remain the Codex-native defaults for coding work.
 
+The same installer also configures `codex-guard` by default:
+
+- writes a Codex `[sandbox].setup` entry to `~/.codex/config.toml`
+- runs `codex-guard/guard.py setup` at session start in future Codex sessions
+- makes source files read-only by default until a validated plan step is begun
+
 If a local Orbit repo is available at `~/Projects/orbit` or `~/projects/orbit`,
 the installer also:
 
@@ -84,10 +90,22 @@ To skip Orbit during a skill install:
 SKIP_ORBIT_INSTALL=1 bash scripts/install-codex-skills.sh
 ```
 
+To skip Codex guard setup during a skill install:
+
+```bash
+SKIP_CODEX_GUARD_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
 To skip the Claude bridge during a skill install:
 
 ```bash
 SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/install-codex-skills.sh
+```
+
+To install or refresh the Codex guard separately:
+
+```bash
+bash scripts/install-codex-guard-integration.sh
 ```
 
 To bootstrap Orbit separately or point at a non-default checkout:
@@ -132,6 +150,7 @@ CHECKOUT_DIR=~/projects/codex-setup bash scripts/bootstrap-codex-skills-from-git
 REPO_URL=https://github.com/<org>/codex-setup.git bash scripts/bootstrap-codex-skills-from-github.sh
 BRANCH=main bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_ORBIT_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
+SKIP_CODEX_GUARD_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_CLAUDE_BRIDGE_INSTALL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 SKIP_PULL=1 bash scripts/bootstrap-codex-skills-from-github.sh
 ```
@@ -154,12 +173,44 @@ For coding work, the expected default is:
 
 - explore first
 - write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
+- if `codex-guard` is installed, use `validate-plan`, `begin-step`, `checkpoint`, and `complete-step` during execution
 - update the plan every 2-3 file edits
 - run relevant verification before declaring done
 
 By default, the Codex skill pack presents new plans through Orbit for review
 with `orbit_await_review` before execution starts unless the user explicitly
 skips that review.
+
+## Codex Guard
+
+`codex-guard` is the Codex-native runtime analogue for the Claude plugin's
+hook-based enforcement. It does not try to recreate Claude hooks literally.
+Instead, it uses a default-deny file-locking model plus explicit step gates:
+
+- `python3 codex-guard/guard.py validate-plan`
+- `python3 codex-guard/guard.py begin-step <N>`
+- `python3 codex-guard/guard.py checkpoint`
+- `python3 codex-guard/guard.py complete-step <N>`
+
+The installer writes a `[sandbox].setup` entry so future Codex sessions run:
+
+```toml
+[sandbox]
+setup = "python3 /absolute/path/to/codex-setup/codex-guard/guard.py setup"
+```
+
+Current guard scope:
+- plan validation and review metadata checks
+- one writable step at a time
+- smart resume of in-progress steps
+- completion gating on recorded Claude PASS verdicts
+- audit logging for checkpoints and writable-file bypasses
+
+Current non-goals:
+- literal Claude hook parity
+- hard interception of grep/deps-query choices
+- receipt-signing parity with the Claude plugin
+- sub-agent prompt injection as a runtime guarantee
 
 ## Asymmetric Claude Workflow
 
