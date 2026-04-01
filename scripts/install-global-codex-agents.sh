@@ -43,8 +43,13 @@ These defaults apply machine-wide. Follow the nearer project or nested
 - Explore first and do that exploration in parallel when possible.
 - Before non-trivial source edits, write `.temp/plan-mode/active/<plan-name>/plan.json`
   and `masterPlan.md`.
-- Use Claude for brainstorming and materially visual frontend implementation
-  through `claude-bridge` when that workflow is available.
+- Keep the main Codex session lean: use it as the conductor and spawn
+  sub-agents for non-trivial exploration, audits, and disjoint implementation
+  lanes when that reduces context pressure.
+- If context gets crowded, checkpoint the active plan to disk and continue from
+  a fresh Codex session instead of relying on an in-session `/clear`.
+- Use Claude only for materially visual frontend implementation and independent
+  verification through `claude-bridge` when that workflow is available.
 - Verify with the project's real lint, typecheck, and relevant tests before
   declaring the task done.
 {end}

@@ -62,9 +62,9 @@ Before invoking `lbyl-brainstorming`, check all 3 conditions:
 3. The correct choice is not already implied by user direction or
    established repo patterns
 
-If all 3 are true, use `lbyl-brainstorming` and route the session to Claude
-through `claude-bridge`. In this repo, brainstorming is never a Codex-only
-fallback.
+If all 3 are true, use `lbyl-brainstorming` in the current Codex session.
+Only escalate to Claude later if the approved direction requires materially
+visual UI execution.
 
 If any condition is false, skip brainstorming and continue with discovery,
 planning, or execution as appropriate.
@@ -203,8 +203,8 @@ If the plan is invalid, stop, repair the plan path first, and only then
 continue to execution.
 
 The skill consumes your discovery.md, identifies applicable discipline
-checklists, builds dep-partition context when available, asks Claude to draft
-the plan, and then writes both:
+checklists, builds dep-partition context when available, drafts the plan
+locally in Codex, and then writes both:
 - `plan.json` — immutable execution definition
 - `progress.json` — mutable execution state created on first mutation
 - `masterPlan.md` — user-facing proposal for Orbit review (write-once, frozen after approval)
@@ -217,27 +217,24 @@ Initialize the plan directory if needed:
 bash ~/.codex/skills/lbyl-conductor/scripts/init-plan-dir.sh
 ```
 
-### Claude drafts the plan before Orbit
+### Codex drafts the plan before Orbit
 
-In the Codex-native workflow, writing-plans should use Claude as the primary
-plan author, not just as an attacker of a Codex-authored draft.
+In the Codex-first workflow, writing-plans should produce the draft locally in
+Codex. Claude is optional later for materially visual implementation or as an
+independent verification gate; it is not the default plan author.
 
 The expected flow is:
 
 1. If dep maps are configured, build `dep-partition.json` from the scoped
    files before drafting.
-2. Call `claude-bridge` `draft_plan` with the current cwd, plan name,
-   discovery path, optional dep-partition path, and the intended `plan.json`
-   and `masterPlan.md` destinations.
-3. Write Claude's returned `planJson` and `masterPlanMarkdown` to disk.
-4. Review the draft locally. Codex remains the orchestrator and may edit the
-   draft for repo-specific fit before Orbit review.
-5. Use `attack_plan` only when the draft is high-risk, materially revised, or
-   explicitly needs an adversarial second pass.
-
-If `claude-bridge` is unavailable, stop and surface the setup failure instead
-of silently replacing the Claude-led drafting phase with a local hand-written
-plan.
+2. Read discovery, applicable checklists, and dep-partition context into the
+   current Codex session.
+3. Write `plan.json` and `masterPlan.md` locally with exact files, skills,
+   routing, and acceptance criteria.
+4. Review the draft locally before Orbit review. Codex remains the
+   orchestrator and final local reviewer.
+5. Use `attack_plan` only as an optional extra adversarial pass for
+   high-risk drafts; it is not part of the required default flow.
 
 ### Plan review via Orbit
 
@@ -328,9 +325,7 @@ Execution rules:
 - If `executor: "claude"`, call the `claude-bridge` `frontend_implement`
   tool with discovery/design context, exact step scope, and any Codex
   follow-up prompt. Claude edits the same working tree directly.
-- Brainstorming uses the live Claude path via `claude-bridge`
-  `brainstorm_start` and `brainstorm_status`, not the headless worker path.
-- Plan drafting uses the headless Claude `draft_plan` tool before Orbit review.
+- Brainstorming and plan drafting both happen in Codex by default.
 - Plan attack remains available as an optional extra review pass for large or
   risky drafts.
 
@@ -339,6 +334,43 @@ executor before execution. The default bias is Codex. Route to Claude only
 for materially visual work such as layout, styling, spacing, typography,
 color, motion, responsive presentation, or theme/token changes that alter
 rendered output.
+
+### Delegation is the default for non-trivial Codex work
+
+Keep the main Codex session lean. For non-trivial Codex-owned work, default to
+the current session as the conductor and fan out bounded sub-agents unless the
+very next critical-path action is faster and safer to do locally.
+
+Default to sub-agents for:
+
+- multi-lane exploration and audits
+- disjoint implementation groups from a step's `subPlan`
+- independent verification or review passes that can run in parallel
+- long-running checks while the conductor keeps integrating
+
+Keep work local in the conductor for:
+
+- plan drafting and plan repairs
+- routing and sequencing decisions
+- immediate blocking edits whose result you need before the next action
+- final integration, conflict resolution, and user-facing decisions
+
+Every delegated task must have:
+
+- an explicit owner and bounded file scope
+- the active plan path
+- the write-back target it must update before finishing
+
+Write-back targets are:
+
+- `discovery.md` for exploration findings
+- `progress.json` updates and step `result` notes for execution progress
+- focused summaries in the conductor message when no shared file is appropriate
+
+Codex does not provide a reliable in-session `/clear`. The replacement is
+context hygiene by design: checkpoint to disk, keep the conductor narrow, and
+if the session gets crowded, start a fresh Codex session and resume from the
+active plan.
 
 ### Guarded execution
 

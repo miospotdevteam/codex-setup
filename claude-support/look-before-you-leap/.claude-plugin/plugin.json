@@ -1,0 +1,9 @@
+{
+  "name": "look-before-you-leap",
+  "description": "Slim Claude support bundle for Codex-driven UI work and independent verification",
+  "mcpServers": {
+    "orbit": {
+      "command": "orbit-mcp"
+    }
+  }
+}

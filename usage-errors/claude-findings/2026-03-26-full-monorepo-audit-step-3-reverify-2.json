@@ -1,0 +1,64 @@
+{
+  "plan": "full-monorepo-audit",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 3,
+  "stepTitle": "Round 3: Swallowed Errors & Validation Hardening",
+  "acceptanceCriteria": "1. Zero .catch(() => {}) patterns remain in web-merchant. 2. Zero empty catch {} blocks remain in web-consumer dashboard. 3. API routes use c.req.valid() instead of manual safeParse where possible. 4. API select() calls specify columns (no full-row exposure). 5. Phone schema has format validation. 6. URL param parsing checks for NaN. 7. tsc --noEmit passes. 8. Tests pass. 9. Parallel Codex+Claude re-verification passes.",
+  "date": "2026-03-26",
+  "findings": [
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/page.tsx",
+      "line": 96,
+      "summary": "Empty catch with comment-only for JWT decode",
+      "detail": "catch { // Ignore decode errors } \u2014 no error handling code, only a comment. This is a defensive pattern for malformed JWT tokens where the fallback (userName stays null) is correct. However, criterion 2 states 'zero empty catch {} blocks remain in web-consumer dashboard'. Strictly, this violates the criterion even though the intent is sound.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/DashboardLayoutClient.tsx",
+      "line": 32,
+      "summary": "Catch block returns null without logging",
+      "detail": "catch { return null; } \u2014 has a return statement (not truly empty), but no error logging or tracking. This is a pure-function JWT parser where returning null on parse failure is the correct fallback. Borderline \u2014 has code (return null) but no error visibility.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/favorites/page.tsx",
+      "line": 51,
+      "summary": "Catch block reloads favorites but doesn't surface error",
+      "detail": "catch { void loadFavorites(); } \u2014 has recovery code (reload the list) but no error toast or logging. This is an optimistic-update rollback pattern: UI removes the favorite immediately, API call fails, catch reloads to restore the true state. The user sees the item reappear (implicit feedback). Not truly 'empty' but has no explicit error notification.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/hooks/useTranslationPolling.ts",
+      "line": 113,
+      "summary": "Polling catch swallows fetch errors with comment only",
+      "detail": "catch { // Silently continue polling on fetch errors } \u2014 intentional resilience pattern for translation polling. Polling should survive transient network failures. Technically violates criterion 1 (zero empty catches in web-merchant) but is a justified network-retry pattern.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/onboarding/hooks/useOnboardingForm.ts",
+      "line": 233,
+      "summary": "Two localStorage catches with comments only (lines 233, 247)",
+      "detail": "catch { // Ignore corrupt draft state. } and catch { // Ignore draft persistence failures. } \u2014 standard defensive localStorage patterns for private browsing mode, quota exceeded, or corrupt data. The app works without drafts. Technically violates criterion 1.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/lib/preview-sync-script.ts",
+      "line": 54,
+      "summary": "Two empty catches in raw JS template for cross-origin detection",
+      "detail": "}catch(_err){} on lines 54 and 57 \u2014 inside a JavaScript template string for iframe origin detection. The function cascades: try referrer \u2192 try parent.location \u2192 fallback to window.location.origin. This is a standard browser-safety pattern. Technically violates criterion 1.",
+      "preventable": false
+    }
+  ]
+}

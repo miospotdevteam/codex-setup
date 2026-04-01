@@ -38,9 +38,6 @@ review tools are available at startup in future Codex sessions.
 
 The same installer also configures `claude-bridge` globally for Codex:
 
-- live Claude brainstorming in VS Code
-- headless Claude plan drafting from discovery + dep-partition context
-- optional headless Claude plan attack for risky drafts
 - headless Claude frontend implementation for materially visual steps
 - hard Claude verification before `claudeVerify` steps are marked done
 
@@ -92,9 +89,9 @@ Ask for the skills explicitly:
 - There are no Claude plugin hooks here. The discipline is carried by the
   skill text, local `AGENTS.md`, on-disk plans, and Orbit-backed MCP review
   tooling.
-- Claude is still part of the default workflow through `claude-bridge`:
-  live brainstorming, headless plan drafting, optional plan attack, Claude-routed visual frontend
-  steps, and the hard verification gate.
+- Claude is not part of the default planning workflow. Through
+  `claude-bridge`, it remains reserved for materially visual frontend steps
+  and the hard verification gate.
 - When installed, `codex-guard` is the hard-default write gate on the Codex
   side for validated step execution.
 - The conductor assumes the companion skills are active for coding work.
@@ -104,10 +101,9 @@ Ask for the skills explicitly:
 - Plan steps now separate `skill` from `executor`, and default to
   `claudeVerify: true`.
 - Dep maps, when used, are configured from `.codex/lbyl-deps.json`.
-- In the default Codex workflow for this repo, Claude drafts the plan from
-  discovery plus dep-partition context, Codex reviews/finalizes it, and then
-  the result goes through `orbit_await_review` unless the user explicitly
-  skips that review.
+- In the default Codex workflow for this repo, Codex drafts the plan locally
+  from discovery plus dep-partition context, then the result goes through
+  `orbit_await_review` unless the user explicitly skips that review.
 - When the skill pack itself causes a workflow error in another session, log
   it back to this repo under `usage-errors/`, preferably via
   `bash ~/Projects/codex-setup/scripts/log-usage-error.sh "short title"`.

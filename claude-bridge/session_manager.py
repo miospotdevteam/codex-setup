@@ -145,13 +145,8 @@ class SessionManager:
             path = Path(env_override).expanduser()
             return str(path.resolve()) if path.exists() else None
 
-        candidate = resolve_first_path(
-            [
-                Path.home() / "Projects" / "claude-code-setup" / "look-before-you-leap",
-                Path.home() / "projects" / "claude-code-setup" / "look-before-you-leap",
-            ]
-        )
-        return str(candidate) if candidate else None
+        bundled = (self.repo_root / "claude-support" / "look-before-you-leap").resolve()
+        return str(bundled) if bundled.exists() else None
 
     def require_extension_heartbeat(self, max_age_seconds: int = 30) -> dict[str, Any]:
         heartbeat = read_json(self.heartbeat_path, {})

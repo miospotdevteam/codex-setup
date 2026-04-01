@@ -1,0 +1,118 @@
+{
+  "plan": "full-monorepo-audit",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 3,
+  "stepTitle": "Round 3: Swallowed Errors & Validation Hardening",
+  "acceptanceCriteria": "1. Zero .catch(() => {}) patterns remain in web-merchant. 2. Zero empty catch {} blocks remain in web-consumer dashboard. 3. API routes use c.req.valid() instead of manual safeParse where possible. 4. API select() calls specify columns (no full-row exposure). 5. Phone schema has format validation. 6. URL param parsing checks for NaN. 7. tsc --noEmit passes. 8. Tests pass. 9. Parallel Codex+Claude re-verification passes.",
+  "date": "2026-03-26",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/waitlist/page.tsx",
+      "line": 112,
+      "summary": "Empty catch {} block swallows errors silently",
+      "detail": "Two empty catch blocks at lines 112 and 326 with no logging or user feedback. Acceptance criterion 1 requires zero .catch(() => {}) / empty catch patterns in web-merchant.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/menu/publish/hooks/useMenuPublishSettings.ts",
+      "line": 358,
+      "summary": "Empty catch {} block swallows menu publish errors",
+      "detail": "Completely empty catch block with no error handling. User gets no feedback when menu publish settings fail.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/vetrina/hooks/useMenuTabSettings.ts",
+      "line": 161,
+      "summary": "Empty catch {} block swallows menu tab settings errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/vetrina/components/QRCodesModal.tsx",
+      "line": 146,
+      "summary": "Empty catch {} block swallows QR code generation errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/menu/qr-codes/page.tsx",
+      "line": 133,
+      "summary": "Empty catch {} block swallows QR code errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/wa-google-card/page.tsx",
+      "line": 48,
+      "summary": "Empty catch {} block swallows errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/stripe-connect/page.tsx",
+      "line": 62,
+      "summary": "Empty catch {} block swallows Stripe connect errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/dashboard/public-page/components/BadgeEmbed.tsx",
+      "line": 28,
+      "summary": "Empty catch {} block swallows errors",
+      "detail": "Completely empty catch block.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/hooks/useCopyUrl.ts",
+      "line": 15,
+      "summary": "Empty catch {} block in clipboard handler",
+      "detail": "Clipboard API error swallowed with no fallback or user feedback.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/loyalty/page.tsx",
+      "line": 253,
+      "summary": "Empty catch block with only comment '// handled silently'",
+      "detail": "Acceptance criterion 2 requires zero empty catch blocks in web-consumer dashboard. This catch swallows errors with only a comment.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/loyalty/page.tsx",
+      "line": 379,
+      "summary": "Empty catch block for clipboard API",
+      "detail": "Clipboard fallback catch \u2014 lower severity since clipboard failures are generally non-critical, but still violates the zero-empty-catch criterion.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "WRONG_PATTERN",
+      "file": "apps/api/src/routes/merchant/waitlist.ts",
+      "line": 111,
+      "summary": "4 safeParse calls remain instead of c.req.valid()",
+      "detail": "Acceptance criterion 3 requires using c.req.valid() instead of manual safeParse where possible. waitlist.ts has 4 safeParse calls (lines 111, 199, 282, 339). Similar issues in 7 other route files (20+ total safeParse calls across routes).",
+      "preventable": true
+    }
+  ]
+}

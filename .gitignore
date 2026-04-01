@@ -1,4 +1,7 @@
 .temp/
+.guard-audit.log
+.guard-state
+.guard-validated
 .claude/settings.local.json
 skill-review-standard-workspace/
 look-before-you-leap-workspace

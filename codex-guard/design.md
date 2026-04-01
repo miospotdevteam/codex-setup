@@ -37,7 +37,7 @@ Behavior:
 - locks all git-tracked files with write bits removed
 - clears stale validation state for the new session
 - if the active plan has an `in_progress` step, re-unlocks that step's files
-- records the resumed step in `.guard-state`
+- records the resumed step in `.temp/plan-mode/guard/.guard-state`
 
 Typical output:
 - `All source files locked. Create a plan to begin.`
@@ -53,7 +53,7 @@ Checks the active plan before execution:
   `id`, `title`, `status`, `files`, `acceptanceCriteria`, `progress`,
   `executor`, `claudeVerify`
 
-On success it writes `.guard-validated`.
+On success it writes `.temp/plan-mode/guard/.guard-validated`.
 
 ### `begin-step <step-id>`
 
@@ -61,14 +61,14 @@ Execution gate for a specific step:
 - refuses to run if `validate-plan` has not passed for the current plan
 - refuses to unlock a second step while another is active
 - unlocks only the step's `files`
-- records unlock state in `.guard-state`
+- records unlock state in `.temp/plan-mode/guard/.guard-state`
 - marks the step `in_progress` through `plan_utils.py`
 
 ### `checkpoint`
 
 Audit checkpoint during execution:
 - requires an unlocked step
-- logs a checkpoint event to `.guard-audit.log`
+- logs a checkpoint event to `.temp/plan-mode/guard/.guard-audit.log`
 - flags when unlocked files are newer than `plan.json`
 
 This is intentionally lightweight. The discipline still depends on the
@@ -82,7 +82,7 @@ Completion gate:
 - audits writable git-tracked files outside the step's file list
 - re-locks the step files
 - marks the step `done`
-- clears `.guard-state`
+- clears `.temp/plan-mode/guard/.guard-state`
 
 The current PASS detector looks for `PASS` near `Claude` or `claude-bridge`
 in the result text. The recommended result shape is:
@@ -106,13 +106,15 @@ The guard writes project-local state:
 
 ```text
 <project-root>/
-├── .guard-state
-├── .guard-audit.log
-├── .guard-validated
-└── .temp/plan-mode/active/<plan>/plan.json
+└── .temp/plan-mode/
+    ├── active/<plan>/plan.json
+    └── guard/
+        ├── .guard-state
+        ├── .guard-audit.log
+        └── .guard-validated
 ```
 
-`.guard-state` example:
+`.temp/plan-mode/guard/.guard-state` example:
 
 ```json
 {
@@ -123,7 +125,7 @@ The guard writes project-local state:
 }
 ```
 
-`.guard-audit.log` is newline-delimited JSON:
+`.temp/plan-mode/guard/.guard-audit.log` is newline-delimited JSON:
 
 ```jsonl
 {"event":"validate_plan","ts":"...","plan":"/abs/path/.../plan.json"}

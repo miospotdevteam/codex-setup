@@ -229,8 +229,8 @@ field contains groups directly:
 ## Phase 2: Execute the Plan
 
 This phase assumes Step 1 exploration already happened in parallel and Step 2
-planning already followed the Codex-write, Claude-attack, Codex-evaluate,
-Orbit-review sequence before execution began.
+planning already followed the Codex-write, optional-Claude-attack,
+Codex-evaluate, Orbit-review sequence before execution began.
 
 ### The Checkpoint Rule (THE #1 RULE OF EXECUTION)
 
@@ -267,7 +267,8 @@ This is a loop. Follow it mechanically.
 │  4. Mark it in_progress — write to disk NOW             │
 │                                                         │
 │  5. Check the step's `executor`                         │
-│     - `codex`  -> implement locally                     │
+│     - `codex`  -> conduct locally and delegate bounded  │
+│                   work when helpful                     │
 │     - `claude` -> call `claude-bridge` `frontend_implement` │
 │                                                         │
 │  6. IF step has a subPlan:                              │
@@ -300,6 +301,35 @@ This is a loop. Follow it mechanically.
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### Delegated execution is normal
+
+Treat the current session as the conductor, not as the only worker. For
+non-trivial Codex-owned steps, it is normal to spawn sub-agents for bounded
+exploration, audits, disjoint file groups, or verification passes.
+
+Delegated work still has to land back on disk:
+
+- exploration agents append findings to `discovery.md`
+- execution agents report enough detail for the conductor to update
+  `progress.json`
+- the conductor records the merged outcome in the step `result`
+
+Do not delegate the plan file writes themselves in parallel. `plan.json` and
+`progress.json` stay serialized through the conductor.
+
+### Fresh-session continuation replaces `/clear`
+
+Codex does not guarantee a Claude-style in-session context clear. The safe
+replacement is:
+
+1. checkpoint the plan and result notes to disk
+2. stop once the next engineer could resume from those artifacts alone
+3. start a fresh Codex session
+4. resume from the active plan instead of trusting stale context
+
+If context feels crowded, that is a signal to checkpoint and restart, not to
+keep accumulating state in the same session.
 
 ### Pre-execution validation is mandatory
 

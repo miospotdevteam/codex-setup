@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXT_DIR="$ROOT_DIR/claude-bridge-vscode"
 MCP_DIR="$ROOT_DIR/claude-bridge"
 SERVER_PATH="$MCP_DIR/server.mjs"
+CLAUDE_SUPPORT_DIR="$ROOT_DIR/claude-support/look-before-you-leap"
 MCP_NAME="${CLAUDE_BRIDGE_MCP_NAME:-claude-bridge}"
 CODEX_BIN="${CODEX_BIN:-codex}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
@@ -88,6 +89,12 @@ fi
 
 printf 'Using claude-bridge repo: %s\n' "$ROOT_DIR"
 printf 'Using Claude CLI: %s\n' "$CLAUDE_CMD"
+if [ -d "$CLAUDE_SUPPORT_DIR" ]; then
+  printf 'Using repo-local Claude support bundle: %s\n' "$CLAUDE_SUPPORT_DIR"
+else
+  printf 'Repo-local Claude support bundle not found yet: %s\n' "$CLAUDE_SUPPORT_DIR"
+  printf 'claude-bridge will rely on CLAUDE_BRIDGE_PLUGIN_DIR only if you override it manually.\n'
+fi
 
 if [ ! -d "$MCP_DIR/node_modules" ]; then
   (cd "$MCP_DIR" && "$NPM_CMD" install)

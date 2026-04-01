@@ -2,9 +2,10 @@
 
 This repository tracks two related things:
 
-- `look-before-you-leap/`: the upstream Claude-oriented source tree, kept in
-  sync with `~/Projects/claude-code-setup`
+- `look-before-you-leap/`: the vendored upstream Claude-oriented reference tree
 - `codex-skills/`: the Codex port, adapted for Codex CLI and GPT-5.4
+- `claude-support/`: the slim Claude support bundle used only for bridge-time
+  UI work and independent verification
 
 The goal is the same in both environments: make the model behave like a
 disciplined engineer instead of a fast but sloppy one. The Codex port keeps
@@ -33,8 +34,21 @@ exact plan files, exact acceptance criteria, and concise progress updates.
 ```text
 look-before-you-leap/   upstream Claude source and hooks
 codex-skills/           Codex-native skill pack
+claude-support/         slim Claude bundle for UI work and verification
 scripts/                install helpers for Codex
 ```
+
+## Slim Claude Support Bundle
+
+`claude-support/look-before-you-leap/` is the bridge-time Claude bundle used
+by this repo's default workflow. It is intentionally narrow:
+
+- `frontend-design/` for standard web UI direction and implementation support
+- `immersive-frontend/` for canvas-heavy or motion-first visual work
+- `independent-verification/` for Claude's read-only review pass
+
+It is not a full Claude-primary plugin port. Planning, brainstorming,
+orchestration, and default implementation stay in Codex.
 
 ## Install the repo skills
 
@@ -84,18 +98,17 @@ The installer also configures `claude-bridge` globally for Codex:
 
 - registers a global Codex MCP server named `claude-bridge`
 - builds and installs the `claude-bridge` VS Code extension
-- enables live Claude brainstorming in VS Code plus authenticated Claude plan-attack,
-  frontend implementation, and verification flows inside Codex sessions
+- enables authenticated Claude frontend implementation and independent
+  verification flows inside Codex sessions
 
 This path assumes:
 
 - `claude` CLI is installed and authenticated
 - `code` CLI is available
 - `npm`, `node`, and `python3` are available locally
-- a local Claude-control checkout is available at
-  `~/Projects/claude-code-setup/look-before-you-leap` or
-  `~/projects/claude-code-setup/look-before-you-leap`, or
-  `CLAUDE_BRIDGE_PLUGIN_DIR` points at that plugin directory
+- the repo-local Claude support bundle exists at
+  `claude-support/look-before-you-leap`, or `CLAUDE_BRIDGE_PLUGIN_DIR`
+  points at an alternate plugin directory
 
 To skip Orbit during a skill install:
 
@@ -179,6 +192,76 @@ This still installs into `~/.codex/skills/`, so future updates are not live.
 After pushing changes to GitHub, rerun the bootstrap script on each machine to
 pull and reinstall the latest version.
 
+## Machine Migration
+
+To back up the current Claude plugin state, remove the old Claude plugin
+footprint, and refresh the global Codex install from this repo:
+
+```bash
+bash scripts/migrate-claude-to-codex-first.sh
+```
+
+Default behavior:
+
+- backs up the current Claude plugin state to
+  `~/.codex/backups/claude-migration-<timestamp>/`
+- uninstalls all currently installed Claude plugins across user, project, and
+  local scopes when possible
+- removes configured Claude marketplaces after plugin uninstall
+- prunes residual Claude plugin cache/data/marketplace directories
+- refreshes the global Codex install by rerunning
+  `scripts/install-codex-skills.sh`
+
+If a previously recorded project path no longer exists, the migration script
+warns, prunes the stale plugin entry from Claude's local state files after the
+backup, and then continues the cleanup instead of leaving the machine in a
+half-migrated state.
+
+Useful overrides:
+
+```bash
+DRY_RUN=1 bash scripts/migrate-claude-to-codex-first.sh
+MIGRATION_SCOPE=legacy-lbyl bash scripts/migrate-claude-to-codex-first.sh
+SKIP_CODEX_REFRESH=1 bash scripts/migrate-claude-to-codex-first.sh
+BACKUP_ROOT=~/Desktop/codex-backups bash scripts/migrate-claude-to-codex-first.sh
+```
+
+`MIGRATION_SCOPE=all` is the default and matches the current Codex-first
+machine reset: Claude keeps no installed plugin footprint on disk, and the
+repo-local `claude-support/look-before-you-leap/` bundle is used only through
+`claude-bridge` for materially visual frontend work and independent
+verification.
+
+## Fresh-Session Continuation
+
+Codex CLI does not currently provide a guaranteed Claude-style in-session
+`/clear` equivalent. The supported replacement in this repo is:
+
+1. write the current execution state back to `progress.json` and the step
+   `result`
+2. start a fresh Codex session
+3. resume from the active plan on disk
+
+Helper command:
+
+```bash
+bash scripts/resume-active-plan-codex.sh
+```
+
+That helper:
+
+- finds the most recently active plan under `.temp/plan-mode/active/`
+- reads the next incomplete step
+- launches a fresh Codex session in the project root with a prompt that tells
+  Codex to read `plan.json`, `progress.json`, and `discovery.md` before
+  continuing
+
+If you only want to inspect the exact command first:
+
+```bash
+bash scripts/resume-active-plan-codex.sh --print-command
+```
+
 ## Use in Codex
 
 Mention the skills explicitly or rely on project `AGENTS.md` defaults. After
@@ -195,11 +278,17 @@ Typical prompts:
 For coding work, the expected default is:
 
 - explore first, in parallel
+- keep the main Codex session lean by spawning sub-agents for non-trivial
+  exploration, audits, and disjoint implementation lanes
+- keep planning, immediate critical-path edits, and final integration in the
+  main Codex session
 - write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
 - let `plan_utils.py` write mutable execution state to `progress.json` during execution
-- have Codex write the draft plan, then run a Claude plan-attack pass, then let Codex accept only the relevant findings before Orbit review
+- have Codex draft and finalize the plan locally, then present it for Orbit review
 - if `codex-guard` is installed, use `validate-plan`, `begin-step`, `checkpoint`, and `complete-step` during execution
 - update the plan every 2-3 file edits
+- if the session starts feeling crowded, checkpoint and resume from a fresh
+  Codex session instead of trying to self-clear context in place
 - run relevant verification before declaring done
 
 By default, the Codex skill pack presents new plans through Orbit for review
@@ -242,19 +331,24 @@ Current non-goals:
 This repo now assumes an intentionally asymmetric split:
 
 - Codex is the orchestrator, runs exploration in parallel, and is the default implementer.
-- Claude handles all brainstorming through `claude-bridge`.
-- Claude drafts plans through the authenticated `draft_plan` tool using
-  discovery plus dep-partition context, and Codex reviews/finalizes that draft
-  before Orbit review.
+- Codex is also the default planner. Plans live on disk and survive compaction,
+  so a fresh Codex session can resume from them without relying on a Claude
+  drafting phase.
+- Codex should proactively spawn sub-agents for non-trivial exploration,
+  audits, and disjoint implementation lanes so the conductor session stays
+  focused on routing, integration, and final decisions.
+- Those delegated lanes must write findings or progress back to disk through
+  `discovery.md`, `progress.json`, or the step `result`; the conductor owns
+  plan-file writes and final synthesis.
 - Claude handles materially visual frontend implementation through the
   headless `frontend_implement` tool.
 - Claude is a hard verification gate before steps are marked `done`.
 
 `claude-bridge` now calls Claude in authenticated non-`--bare` mode with
 `disableAllHooks: true`, `--setting-sources project,local`, and the local
-`look-before-you-leap` plugin passed via `--plugin-dir`. That keeps Claude's
-skills available while preventing the plugin hook layer from mutating Codex
-plan state during bridge runs.
+`claude-support/look-before-you-leap` bundle passed via `--plugin-dir`. That
+keeps Claude's UI and verification skills available while preventing the old
+Claude-primary plugin model from mutating Codex plan state during bridge runs.
 
 Plan steps should carry conductor-owned routing metadata:
 
@@ -263,10 +357,16 @@ Plan steps should carry conductor-owned routing metadata:
   all non-visual work
 - `claudeVerify: true` by default on every step
 
-Brainstorming uses a live Claude session surfaced in VS Code and exposed back
-to Codex through `brainstorm_start` and `brainstorm_status`. Plan drafting uses
-a headless Claude pass exposed through `draft_plan`. `attack_plan` remains
-available as an optional extra adversarial review pass for high-risk drafts.
+This repo does not depend on Claude for default brainstorming or plan drafting.
+If a future workflow chooses to use those bridge tools, treat them as optional
+extras rather than part of the required Codex-first path.
+
+Codex CLI does not currently expose a guaranteed Claude-style in-session
+`/clear` flow. The intended replacement is persistent-plan continuation:
+write state to disk, start a fresh Codex session, and resume from the active
+plan instead of pretending the same session can self-clear safely. Use
+`bash scripts/resume-active-plan-codex.sh` when you want the repo's default
+fresh-session handoff.
 
 Non-PASS verification rounds write JSON findings to
 [`usage-errors/claude-findings`](/Users/robertobortolaso/Projects/codex-setup/usage-errors/claude-findings).

@@ -70,7 +70,9 @@ class InstallGlobalCodexAgentsTests(unittest.TestCase):
             self.assertNotIn("old content", text)
             self.assertEqual(text.count(BEGIN_MARKER), 1)
             self.assertEqual(text.count(END_MARKER), 1)
-            self.assertIn("Use Claude for brainstorming", text)
+            self.assertIn("Keep the main Codex session lean", text)
+            self.assertIn("fresh Codex session", text)
+            self.assertIn("Use Claude only for materially visual frontend implementation", text)
 
 
 if __name__ == "__main__":

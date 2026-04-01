@@ -41,14 +41,16 @@ Upstream skills also shipped from this repo:
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - During execution, treat `plan.json` as the definition and `progress.json` as the mutable runtime tracker.
-- For non-trivial work, Claude drafts the plan through `claude-bridge` with the full discovery context and dep-partition context when available, Codex reviews/finalizes the draft, and Orbit reviews the result. Use `attack_plan` only for high-risk or materially revised drafts.
+- For non-trivial work, Codex owns planning locally, fans out discovery and implementation lanes through sub-agents where useful, and presents the resulting plan through Orbit review before execution.
+- Keep planning, immediate critical-path edits, and final integration in the main Codex session; delegated lanes must write findings or progress back to disk for the conductor to merge.
 - If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Serialize `plan_utils.py` writes; never update the same `plan.json` in parallel.
 - Verify with project typecheck, lint, and relevant tests before declaring done.
 - Treat `claudeVerify: true` as a hard gate: do not mark a step `done` until `claude-bridge` returns `PASS`.
-- Route all brainstorming through `claude-bridge` in VS Code and route materially visual frontend steps to Claude via the conductor-resolved `executor: "claude"`.
+- Use Codex as the default conductor and implementer; route only materially visual frontend steps to Claude via the conductor-resolved `executor: "claude"`, and keep Claude as the independent verification gate where `claudeVerify: true`.
+- If context gets crowded, checkpoint the plan state to disk and continue from a fresh Codex session; do not assume an in-session `/clear` exists. The repo helper for that handoff is `bash scripts/resume-active-plan-codex.sh`.
 - If a future session uncovers a failure caused by the LBYL skill pack itself, log it here under `usage-errors/`, preferably via `bash scripts/log-usage-error.sh "short title"`.
 - Never silently drop requested scope.
 

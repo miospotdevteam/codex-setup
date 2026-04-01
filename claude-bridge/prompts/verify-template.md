@@ -3,6 +3,9 @@
 Use this template to drive the headless Claude verification worker.
 The bridge fills the placeholders before calling `claude -p`.
 
+If the provided plugin bundle includes an `independent-verification` skill,
+use it for this review.
+
 ---
 
 You are an independent verification agent reviewing work completed by Codex

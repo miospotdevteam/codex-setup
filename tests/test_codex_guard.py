@@ -54,6 +54,9 @@ class GuardCliTests(unittest.TestCase):
     def active_plan(self) -> Path:
         return self.root / ".temp" / "plan-mode" / "active" / "demo" / "plan.json"
 
+    def guard_state_dir(self) -> Path:
+        return self.root / ".temp" / "plan-mode" / "guard"
+
     def make_plan(
         self,
         *,
@@ -189,7 +192,7 @@ class GuardCliTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("routed to Claude", result.stderr)
         self.assertIn("frontend_implement", result.stderr)
-        self.assertFalse((self.root / ".guard-state").exists())
+        self.assertFalse((self.guard_state_dir() / ".guard-state").exists())
         self.assertEqual(self.load_plan()["steps"][0]["status"], "pending")
 
     def test_begin_step_allows_codex_executor(self) -> None:
@@ -245,6 +248,37 @@ class GuardCliTests(unittest.TestCase):
         self.assertFalse(is_user_writable(self.root / "src" / "a.txt"))
         updated = self.load_plan()
         self.assertEqual(updated["steps"][0]["status"], "done")
+
+    def test_guard_state_is_written_under_temp_plan_mode_guard(self) -> None:
+        self.make_plan()
+        self.assertEqual(self.run_guard("validate-plan").returncode, 0)
+        self.assertTrue((self.guard_state_dir() / ".guard-validated").exists())
+        self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
+        self.assertTrue((self.guard_state_dir() / ".guard-state").exists())
+        self.assertEqual(self.run_guard("checkpoint").returncode, 0)
+        self.assertTrue((self.guard_state_dir() / ".guard-audit.log").exists())
+        self.assertFalse((self.root / ".guard-validated").exists())
+        self.assertFalse((self.root / ".guard-state").exists())
+        self.assertFalse((self.root / ".guard-audit.log").exists())
+
+    def test_legacy_root_guard_state_is_migrated(self) -> None:
+        self.make_plan()
+        (self.root / ".guard-validated").write_text(
+            json.dumps({"plan_path": "legacy", "validated_at": "2026-04-01T00:00:00+00:00"}),
+            encoding="utf-8",
+        )
+        (self.root / ".guard-audit.log").write_text(
+            '{"event":"legacy"}\n',
+            encoding="utf-8",
+        )
+
+        result = self.run_guard("status")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / ".guard-validated").exists())
+        self.assertFalse((self.root / ".guard-audit.log").exists())
+        self.assertTrue((self.guard_state_dir() / ".guard-validated").exists())
+        self.assertTrue((self.guard_state_dir() / ".guard-audit.log").exists())
 
 
 if __name__ == "__main__":

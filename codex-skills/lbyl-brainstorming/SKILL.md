@@ -1,6 +1,6 @@
 ---
 name: lbyl-brainstorming
-description: "Use when a task has unresolved design ambiguity with materially different approaches. Best for new features, components, workflows, or behavior changes where multiple plausible UX, API, data-model, or architecture choices exist and the right answer is not already implied by user direction or repo patterns. In this repo, all approved brainstorming is routed to Claude through claude-bridge rather than a Codex-only brainstorm loop. Do NOT use for implementation planning (use writing-plans), debugging, bug fixes, refactoring, migrations, audits, or executing an already-written plan."
+description: "Use when a task has unresolved design ambiguity with materially different approaches. Best for new features, components, workflows, or behavior changes where multiple plausible UX, API, data-model, or architecture choices exist and the right answer is not already implied by user direction or repo patterns. In this repo, brainstorming is Codex-first; Claude is reserved for materially visual UI execution and independent verification, not for default ideation. Do NOT use for implementation planning (use writing-plans), debugging, bug fixes, refactoring, migrations, audits, or executing an already-written plan."
 ---
 
 # Brainstorming
@@ -53,26 +53,23 @@ to build a picture of the relevant codebase:
 If this is a **greenfield project** with no existing codebase, skip the
 reads and note the greenfield context — proceed directly to questions.
 
-### 2. Route the conversation to live Claude
+### 2. Run the design conversation in Codex
 
-In this repo's workflow, brainstorming is always handled by the live Claude
-session, not by a Codex-only Q&A loop.
+In this repo's workflow, brainstorming is handled in the current Codex
+session by default. Treat Codex as the design conductor:
 
-If the `claude-bridge` MCP server is available:
+1. Ask one question at a time.
+2. Propose defaults when the user is unsure.
+3. Compare alternatives before converging.
+4. Stop once the design is concrete enough for `design.md`.
 
-1. Call `brainstorm_start` with the project cwd, a concise session title, and
-   a prompt that tells Claude to:
-   - ask one question at a time
-   - propose defaults when the user is unsure
-   - compare alternatives before converging
-   - stop once the design is concrete enough for `design.md`
-2. Tell the user the live brainstorming session is opening in VS Code.
-3. Use `brainstorm_status` periodically to follow the transcript and capture
-   decisions.
+If the discovery surface is broad, spawn explorer sub-agents first to gather
+repo facts or comparable patterns, then synthesize the design decision in the
+main Codex session. Keep the final tradeoff call local to the conductor.
 
-If `claude-bridge` is unavailable or the extension is not running, stop and
-surface the setup failure. Do not silently fall back to a Codex-only
-brainstorming session.
+Do not route default ideation to Claude. If the approved direction later
+requires materially visual frontend execution, Claude may still be used at the
+implementation step via `frontend_implement`.
 
 ### 3. Ask questions — one at a time
 

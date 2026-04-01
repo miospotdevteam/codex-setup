@@ -1,0 +1,37 @@
+{
+  "plan": "codex-first-global-setup",
+  "project": "/Users/robertobortolaso/Projects/codex-setup",
+  "step": 1,
+  "stepTitle": "Rebase the repo on a Codex-first operating model and remove hard dependency on claude-code-setup",
+  "acceptanceCriteria": "No core runtime path or top-level doc still depends on claude-code-setup as the default Claude plugin source, and the repo guidance consistently describes Codex as the primary agent with Claude restricted to UI and verification support.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "claude-support/look-before-you-leap",
+      "line": null,
+      "summary": "Referenced claude-support bundle directory does not exist",
+      "detail": "session_manager.py:148-149 resolves the plugin dir to repo_root/claude-support/look-before-you-leap, and install-claude-bridge-codex-integration.sh:9 sets CLAUDE_SUPPORT_DIR to the same path. Neither path exists on disk. This means _resolve_plugin_dir() will always return None unless CLAUDE_BRIDGE_PLUGIN_DIR is set, silently breaking bridge-launched Claude runs that depend on a plugin dir. The install script prints a warning but does not fail, so a user could complete installation without noticing the missing bundle.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "MISSED_CONSUMER",
+      "file": "look-before-you-leap/skills/look-before-you-leap/references/codex-verify-template.md",
+      "line": 28,
+      "summary": "codex-verify-template.md still references ~/Projects/claude-code-setup/ in 4 places",
+      "detail": "Lines 28, 157, 172, and 177 of look-before-you-leap/skills/look-before-you-leap/references/codex-verify-template.md still direct Claude verification output to ~/Projects/claude-code-setup/usage-errors/codex-findings/. This file was not in the expected-files list but is a direct consumer of the repo identity \u2014 it tells Claude where to write findings. After the migration these paths should point at ~/Projects/codex-setup/.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "MISSED_CONSUMER",
+      "file": "look-before-you-leap/hooks/check-api-contracts.sh",
+      "line": 66,
+      "summary": "check-api-contracts.sh glob still references claude-code-setup",
+      "detail": "Line 66 uses a glob pattern */.claude/*|*/claude-code-setup/* to exclude paths. This is a Claude-side hook file and may be part of the upstream vendored tree, so its urgency is lower, but it still carries the old repo name.",
+      "preventable": false
+    }
+  ]
+}

@@ -24,9 +24,8 @@ The plugin is trying to force an LBYL discipline loop:
 
 ### What it actually does today
 
-The current source repo at
-`/Users/robertobortolaso/Projects/claude-code-setup/look-before-you-leap`
-does more than the vendored tree in this repo suggested:
+The external Claude-oriented source repo used during the original parity work
+did more than the vendored tree in this repo suggested:
 
 - hook surface:
   `session-start`, `onboarding`, `capture-user-override`,
@@ -73,8 +72,8 @@ It did not have:
 | Session-start enforcement | Claude `SessionStart` hook | Skill text only | High | Install `codex-guard` through Codex `[sandbox].setup` so session start locks files and resumes in-progress steps |
 | Plan-before-edit gate | `PreToolUse` hook on `Edit|Write|Bash` | Process guidance only | High | `guard.py setup` locks tracked files; `begin-step` unlocks only validated step files |
 | Parallel exploration discipline | Claude can fan out Codex helpers from the plugin side | Serial exploration guidance only | Medium | Codex conductor now requires foreground-parallel exploration before planning |
-| Claude-led plan authoring before approval | Claude plugin leads writing-plans | Codex-side docs still centered Codex-authored drafts | High | Claude now drafts the plan via `draft_plan` from discovery + dep-partition context, Codex reviews/finalizes it, and `attack_plan` becomes an optional extra pass |
-| Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred approval tool after the Claude attack pass |
+| Claude-led plan authoring before approval | Claude plugin leads writing-plans | Codex-side docs still centered Codex-authored drafts | High | Codex now drafts and finalizes plans locally; Claude drafting is optional and not part of the required default flow |
+| Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred approval tool after local Codex drafting |
 | Step ownership | Hook-time ownership routing | None | High | One writable step at a time through `begin-step` / `complete-step`; preserves intent without per-tool interception |
 | Execution routing | Claude planner / operator chooses who implements | Planner-authored `executor` field | High | Conductor-owned routing resolver now stamps `executor`, `routingReason`, and routing metadata before execution, with Codex as the default |
 | Completion gate | Hook-time result / receipt checks | `claudeVerify` described in docs only | High | `guard.py complete-step` requires non-empty result and Claude PASS verdict when `claudeVerify: true` |
@@ -185,12 +184,13 @@ so the documented Codex workflow matches the implemented runtime path.
 Updated the Codex-side instructions so the intended asymmetric model is now:
 
 - exploration runs in parallel by default
-- Claude drafts the plan through `claude-bridge`
+- Codex drafts and finalizes plans locally
 - dep-partition context feeds step sizing and parallelization where dep maps exist
-- Codex reviews and finalizes the draft locally
+- Codex keeps the conductor session lean by spawning sub-agents for non-trivial
+  exploration, audits, and disjoint implementation lanes
 - `attack_plan` is optional for high-risk or materially revised drafts
 - Orbit reviews the resulting draft
-- all brainstorming runs through live Claude
+- Claude is reserved for materially visual frontend work and independent verification
 
 ### Conductor-owned routing
 
@@ -212,9 +212,10 @@ Added `tests/test_codex_guard.py` covering:
 Added `tests/test_claude_bridge_session_manager.py` and updated
 `claude-bridge/session_manager.py` so bridge calls now use authenticated
 non-`--bare` Claude with `disableAllHooks: true`, `--setting-sources
-project,local`, and the local `look-before-you-leap` plugin dir. That
-preserves Claude skill availability while preventing the upstream plugin hook
-layer from mutating Codex plan state during a review pass.
+project,local`, and a repo-local slim Claude support bundle. That preserves
+only the Claude capabilities Codex still needs while preventing the upstream
+Claude-primary plugin model from mutating Codex plan state during a review
+pass.
 
 ## 6. Remaining Gaps
 

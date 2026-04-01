@@ -63,7 +63,7 @@ case "$FILE_PATH" in
     exit 0 ;;
   *.test.*|*.spec.*|*__tests__/*|*__mocks__/*)
     exit 0 ;;
-  */.claude/*|*/claude-code-setup/*)
+  */.claude/*|*/codex-setup/*)
     exit 0 ;;
 esac
 

@@ -222,6 +222,17 @@ enough on its own. After your normal typecheck/lint/test/build passes, run the
 `claude-bridge` verification step and do not mark the step `done` until
 Claude returns `PASS`.
 
+### Delegation discipline
+
+If you spawned sub-agents during the step, verify that their work was merged
+back into the plan state before you call the task done:
+
+1. confirm each delegated lane had a bounded scope and an explicit owner
+2. confirm findings or progress landed in `discovery.md`, `progress.json`, or
+   the step `result`
+3. re-run local verification after integrating delegated edits, not before
+4. only then request Claude verification when the step requires it
+
 ### Self-audit after corrections
 
 When the user points out a mistake, do not just fix that one instance.

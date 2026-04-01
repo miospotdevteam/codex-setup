@@ -53,7 +53,15 @@ def repo_root_from(start: Path | None) -> Path:
     return current
 
 
+def guard_state_dir(project_root: Path) -> Path:
+    return project_root / ".temp" / "plan-mode" / "guard"
+
+
 def state_path(project_root: Path, name: str) -> Path:
+    return guard_state_dir(project_root) / name
+
+
+def legacy_state_path(project_root: Path, name: str) -> Path:
     return project_root / name
 
 
@@ -145,6 +153,7 @@ def make_user_writable(path: Path) -> None:
 
 def append_audit(project_root: Path, event: str, **data: Any) -> None:
     payload = {"event": event, "ts": utc_now(), **data}
+    audit_log_path(project_root).parent.mkdir(parents=True, exist_ok=True)
     with audit_log_path(project_root).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
@@ -158,6 +167,7 @@ def load_unlock_state(project_root: Path) -> dict[str, Any] | None:
 
 
 def write_unlock_state(project_root: Path, payload: dict[str, Any]) -> None:
+    unlock_state_path(project_root).parent.mkdir(parents=True, exist_ok=True)
     with unlock_state_path(project_root).open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
@@ -177,6 +187,7 @@ def read_validation(project_root: Path) -> dict[str, Any] | None:
 
 def write_validation(project_root: Path, plan_path: Path) -> None:
     payload = {"plan_path": str(plan_path), "validated_at": utc_now()}
+    validation_path(project_root).parent.mkdir(parents=True, exist_ok=True)
     with validation_path(project_root).open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
@@ -184,6 +195,32 @@ def write_validation(project_root: Path, plan_path: Path) -> None:
 
 def clear_validation(project_root: Path) -> None:
     validation_path(project_root).unlink(missing_ok=True)
+
+
+def migrate_legacy_guard_state(project_root: Path) -> None:
+    migrations = {
+        ".guard-audit.log": "append",
+        ".guard-state": "move",
+        ".guard-validated": "move",
+    }
+    state_dir = guard_state_dir(project_root)
+    for name, mode in migrations.items():
+        legacy = legacy_state_path(project_root, name)
+        current = state_path(project_root, name)
+        if not legacy.exists():
+            continue
+        state_dir.mkdir(parents=True, exist_ok=True)
+        if mode == "append" and current.exists():
+            legacy_text = legacy.read_text(encoding="utf-8")
+            if legacy_text:
+                with current.open("a", encoding="utf-8") as handle:
+                    handle.write(legacy_text)
+            legacy.unlink()
+            continue
+        if current.exists():
+            legacy.unlink()
+            continue
+        legacy.replace(current)
 
 
 def step_files(project_root: Path, step: dict[str, Any]) -> list[Path]:
@@ -513,6 +550,7 @@ def main(argv: list[str] | None = None) -> int:
     project_root = repo_root_from(
         Path(args.project_root).resolve() if args.project_root else None
     )
+    migrate_legacy_guard_state(project_root)
 
     commands = {
         "setup": cmd_setup,

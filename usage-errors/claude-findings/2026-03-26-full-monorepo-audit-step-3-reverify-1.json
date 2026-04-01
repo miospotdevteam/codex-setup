@@ -1,0 +1,46 @@
+{
+  "plan": "full-monorepo-audit",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 3,
+  "stepTitle": "Round 3: Swallowed Errors & Validation Hardening",
+  "acceptanceCriteria": "1. Zero .catch(() => {}) patterns remain in web-merchant. 2. Zero empty catch {} blocks remain in web-consumer dashboard. 3. API routes use c.req.valid() instead of manual safeParse where possible. 4. API select() calls specify columns (no full-row exposure). 5. Phone schema has format validation. 6. URL param parsing checks for NaN. 7. tsc --noEmit passes. 8. Tests pass. 9. Parallel Codex+Claude re-verification passes.",
+  "date": "2026-03-26",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/lib/preview-sync-script.ts",
+      "line": 54,
+      "summary": "Two empty catch(_err){} blocks in preview-sync-script",
+      "detail": "Lines 54 and 57 have completely empty catch blocks in getParentOrigin(). These are defensive cross-origin fallbacks (try referrer \u2192 try parent.location \u2192 fallback to window.location.origin). The pattern is intentional \u2014 cross-origin access throws and the function cascades through alternatives. This is an acceptable browser-safety pattern and arguably should not count as 'swallowed'. However, the acceptance criterion says 'zero' empty catches in web-merchant.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/hooks/useTranslationPolling.ts",
+      "line": 113,
+      "summary": "Empty catch with comment '// Silently continue polling on fetch errors'",
+      "detail": "Translation polling swallows fetch errors to keep polling alive. The intent is documented but no console.warn or error tracking is present. This is a network-resilience pattern \u2014 polling should survive transient fetch failures. Borderline acceptable but technically violates the zero-empty-catch criterion.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/onboarding/hooks/useOnboardingForm.ts",
+      "line": 233,
+      "summary": "Two empty catches for localStorage draft read/write (lines 233, 247)",
+      "detail": "Line 233: catch for corrupt JSON.parse of localStorage draft. Line 247: catch for localStorage.setItem failure. Both are documented with comments. These are standard defensive localStorage patterns (private browsing, quota exceeded, corrupt data). The fallback is correct \u2014 the app works without drafts. Technically violates criterion 1 but is an intentional resilience pattern.",
+      "preventable": false
+    },
+    {
+      "severity": "LOW",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-consumer/src/app/[locale]/dashboard/page.tsx",
+      "line": 96,
+      "summary": "Empty catch for JWT base64 decode with comment '// Ignore decode errors'",
+      "detail": "Catches errors from manual JWT payload decoding (split/parse). The fallback is that userName stays null, which is handled. This is a defensive pattern for malformed tokens \u2014 the app degrades gracefully. Technically violates criterion 2 (zero empty catch blocks in web-consumer dashboard) but is intentional.",
+      "preventable": false
+    }
+  ]
+}

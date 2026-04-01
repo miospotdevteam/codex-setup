@@ -25,7 +25,7 @@ criteria changed. "Pre-existing" is not a valid dismissal.
 ## Findings log
 
 When you find issues (anything other than PASS), write a JSON findings
-report to ~/Projects/claude-code-setup/usage-errors/codex-findings/ BEFORE
+report to ~/Projects/codex-setup/usage-errors/codex-findings/ BEFORE
 returning your response. Create the directory if it doesn't exist.
 
 Log findings on EVERY verification round — initial verification AND
@@ -154,7 +154,7 @@ step {step.id} against the same acceptance criteria. Report any
 remaining issues or confirm PASS.
 
 If you find remaining issues, log them to
-~/Projects/claude-code-setup/usage-errors/codex-findings/ as
+~/Projects/codex-setup/usage-errors/codex-findings/ as
 YYYY-MM-DD-{plan.name}-step-{step.id}-reverify-{N}.json
 (where N is this re-verify round number: 1, 2, 3, ...).
 Use the same JSON structure as the initial findings log.
@@ -169,12 +169,12 @@ Use the same JSON structure as the initial findings log.
   knows how to check blast radius, run dep maps, and verify types.
   The template just gives it the *what* (acceptance criteria, scope).
 - **sandbox: danger-full-access** allows Codex to run tests, tsc, and
-  write findings logs to the plugin repo (~/Projects/claude-code-setup/).
+  write findings logs to the plugin repo (~/Projects/codex-setup/).
 - **approval-policy: never** makes Codex fully autonomous — no human
   intervention during verification.
 - **Codex is a pure reviewer** — it reports issues but never modifies
   project source files. It writes JSON findings logs to the plugin repo
-  (`~/Projects/claude-code-setup/usage-errors/codex-findings/`) so
+  (`~/Projects/codex-setup/usage-errors/codex-findings/`) so
   Claude can parse them programmatically to identify recurring failure
   patterns and improve plugin instructions.
 - **Requires the Codex MCP server** to be configured globally
