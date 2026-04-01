@@ -46,6 +46,9 @@ class InstallGlobalCodexAgentsTests(unittest.TestCase):
             self.assertIn(BEGIN_MARKER, text)
             self.assertIn(END_MARKER, text)
             self.assertIn("default to `lbyl-conductor` and `lbyl-engineering-discipline`", text)
+            self.assertIn("The full LBYL flow is MANDATORY, REQUIRED, and NON-NEGOTIABLE", text)
+            self.assertIn("Treat the installed LBYL skill pack as the baseline operating mode", text)
+            self.assertIn("Proactively invoke the exact `lbyl-*` skill", text)
             self.assertIn("nearer project or nested", text)
 
     def test_installer_updates_managed_block_without_clobbering_other_content(self) -> None:
@@ -71,6 +74,11 @@ class InstallGlobalCodexAgentsTests(unittest.TestCase):
             self.assertEqual(text.count(BEGIN_MARKER), 1)
             self.assertEqual(text.count(END_MARKER), 1)
             self.assertIn("Keep the main Codex session lean", text)
+            self.assertIn("Claude `attack_plan` approval before Orbit review or execution", text)
+            self.assertIn("parallel exploration", text)
+            self.assertIn("Do not proceed with solo or serial exploration", text)
+            self.assertIn("every step MUST be verified with Claude", text)
+            self.assertIn("explicit Claude PASS verdict", text)
             self.assertIn("fresh Codex session", text)
             self.assertIn("Use Claude only for materially visual frontend implementation", text)
 

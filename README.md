@@ -5,7 +5,7 @@ This repository tracks two related things:
 - `look-before-you-leap/`: the vendored upstream Claude-oriented reference tree
 - `codex-skills/`: the Codex port, adapted for Codex CLI and GPT-5.4
 - `claude-support/`: the slim Claude support bundle used only for bridge-time
-  UI work and independent verification
+  exploration, UI work, and independent verification
 
 The goal is the same in both environments: make the model behave like a
 disciplined engineer instead of a fast but sloppy one. The Codex port keeps
@@ -43,6 +43,7 @@ scripts/                install helpers for Codex
 `claude-support/look-before-you-leap/` is the bridge-time Claude bundle used
 by this repo's default workflow. It is intentionally narrow:
 
+- `explorer/` for read-heavy codebase discovery and plan pressure-testing
 - `frontend-design/` for standard web UI direction and implementation support
 - `immersive-frontend/` for canvas-heavy or motion-first visual work
 - `independent-verification/` for Claude's read-only review pass
@@ -83,6 +84,11 @@ The installer also configures a machine-global Codex instruction layer:
 - writes a managed defaults block to `~/.codex/AGENTS.md`
 - makes any Codex repo invocation default to `lbyl-conductor` plus
   `lbyl-engineering-discipline` in future Codex sessions
+- tells Codex to treat the installed `lbyl-*` pack as its baseline workflow
+  and to invoke exact `lbyl-*` skills proactively by task type
+- requires Claude `attack_plan` approval before Orbit review or execution when
+  a plan is large/high-blast-radius, materially revised, fragile in
+  sequencing/verification, or explicitly flagged for extra pressure-testing
 - preserves any unrelated user content in `~/.codex/AGENTS.md`
 - defers to nearer project or nested `AGENTS.md` files when a repo provides
   stronger local guidance
@@ -100,6 +106,7 @@ startup via `~/.codex/config.toml`.
 The installer also configures `claude-bridge` globally for Codex:
 
 - registers a global Codex MCP server named `claude-bridge`
+- persists `startup_timeout_sec` and `tool_timeout_sec` for long-running Claude calls
 - builds and installs the `claude-bridge` VS Code extension
 - enables authenticated Claude frontend implementation and independent
   verification flows inside Codex sessions
@@ -112,6 +119,17 @@ This path assumes:
 - the repo-local Claude support bundle exists at
   `claude-support/look-before-you-leap`, or `CLAUDE_BRIDGE_PLUGIN_DIR`
   points at an alternate plugin directory
+
+By default the installer writes:
+
+- `startup_timeout_sec = 300`
+- `tool_timeout_sec = 10800`
+
+That gives `claude-bridge` a 5 minute startup window and a 3 hour tool-call
+window inside Codex, which is a much better fit for long verification or
+implementation passes than the short MCP defaults. You can override these at
+install time with `CLAUDE_BRIDGE_MCP_STARTUP_TIMEOUT_SEC` and
+`CLAUDE_BRIDGE_MCP_TOOL_TIMEOUT_SEC`.
 
 To skip Orbit during a skill install:
 
@@ -154,6 +172,7 @@ To install or refresh Claude bridge separately:
 
 ```bash
 bash scripts/install-claude-bridge-codex-integration.sh
+CLAUDE_BRIDGE_MCP_TOOL_TIMEOUT_SEC=14400 bash scripts/install-claude-bridge-codex-integration.sh
 ```
 
 ## Install from GitHub

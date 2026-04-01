@@ -1,0 +1,37 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 6,
+  "stepTitle": "Scope OTP verification to the action being authorized",
+  "acceptanceCriteria": "OTP proof cannot be reused across unrelated flows. Consent submit, public booking actions, and beach booking each require matching scoped verification. Existing OTP tests pass or are updated.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/api/drizzle/",
+      "line": null,
+      "summary": "Migration SQL file 0031_add_otp_verification_scope.sql is missing",
+      "detail": "The journal at apps/api/drizzle/meta/_journal.json references tag '0031_add_otp_verification_scope' (idx 32), but the corresponding SQL file apps/api/drizzle/0031_add_otp_verification_scope.sql does not exist. The schema in consent-schema.ts declares the 'scope' column and 'otp_verifications_scope_idx' index, but no migration will add them to the database. Deploying without this file will either fail or leave the column missing, breaking all scoped OTP functionality.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "MISSING_TEST",
+      "file": "apps/api/src/__tests__/integration/public-consent-proof.test.ts",
+      "line": 50,
+      "summary": "Consent proof test inserts OTP rows without scope \u2014 will fail against a real database",
+      "detail": "createConsentVerificationProof() at line 50 inserts an otpVerifications row without the 'scope' field (defaults to null). However, the consent verify endpoint at otp-routes.ts:136 now passes scope: buildConsentOtpScope(token), which makes verifyPhoneOtpCode filter for eq(otpVerifications.scope, 'consent:v1:TOKEN'). The null-scope row won't match, so the verify will return a 400 instead of the expected 200. The insert should include scope: buildConsentOtpScope(token) to match the endpoint's scoped query.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "MISSING_TEST",
+      "file": null,
+      "line": null,
+      "summary": "All database-dependent integration tests were skipped \u2014 acceptance criteria not exercised",
+      "detail": "TEST_DATABASE_URL was not set, so all .skipIf(!process.env.TEST_DATABASE_URL) integration tests were skipped (432 skips). The 42 passes come from non-database tests. This means the scoped OTP send/verify, cross-scope rejection for consent/booking/beach, and proof consumption tests have not actually been run. The acceptance criteria require these tests to pass, but they were never executed.",
+      "preventable": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 113,
+  "stepTitle": "Redesign shared web auth token storage",
+  "acceptanceCriteria": "Web auth no longer persists access/refresh tokens through JS-readable cookies, or the step is intentionally split into a safe staged migration with the highest-risk leak path removed first. Both web apps still authenticate correctly and verification passes.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "WRONG_PATTERN",
+      "file": "packages/web-runtime/src/server/auth-session-route.ts",
+      "line": 6,
+      "summary": "Session hint cookie name mismatch between server route and rest of codebase",
+      "detail": "auth-session-route.ts defines AUTH_HINT_COOKIE = 'sb-auth-present' (line 6), but auth-cookie-names.ts exports AUTH_SESSION_COOKIE = 'miospot-web-auth' and all middleware files check for 'miospot-web-auth'. Both web-consumer and web-merchant wire up this server route at /api/auth/session. When the server POST handler sets cookies, it will write 'sb-auth-present', but middleware will look for 'miospot-web-auth' \u2014 meaning server-initiated sessions won't keep users logged in through middleware redirects. The server route should import and use AUTH_SESSION_COOKIE from '../lib/auth-cookie-names' instead of defining its own constant.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "MISSED_CONSUMER",
+      "file": "apps/web-consumer/src/app/[locale]/lookbook/[slug]/preview/route.ts",
+      "line": 55,
+      "summary": "Preview route hardcodes 'sb-access-token' instead of using ACCESS_TOKEN_COOKIE constant",
+      "detail": "This server-side route reads the access token cookie with a hardcoded string 'sb-access-token'. If the cookie name ever changes, this route will silently break. It should import ACCESS_TOKEN_COOKIE from '@miospot/web-runtime/lib/auth-cookie-names'.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "MISSED_CONSUMER",
+      "file": "apps/web-consumer/src/app/[locale]/menu/[slug]/preview/route.ts",
+      "line": 28,
+      "summary": "Preview route hardcodes 'sb-access-token' instead of using ACCESS_TOKEN_COOKIE constant",
+      "detail": "Same issue as the lookbook preview route \u2014 hardcoded cookie name instead of the shared constant.",
+      "preventable": true
+    }
+  ]
+}

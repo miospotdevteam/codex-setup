@@ -1,0 +1,28 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 99,
+  "stepTitle": "Completed remediation batch so far",
+  "acceptanceCriteria": "1. Consumer dashboard surfaces both normal bookings and beach bookings without broken actions or date rendering regressions. 2. Consumer discover local recent-search/chat state no longer leaks anonymous state into authenticated sessions and has bounded local retention. 3. Merchant onboarding browser draft persistence excludes phone, email, and legal identity while preserving safe resumable onboarding state. 4. MCP resources/read respects locale encoded in widget URIs, landing-page counts/copy match the exposed tool catalog, business-card widget supports the actual distance field shape, and waitlist source attribution is preserved. 5. Mobile auth deep links require a locally issued nonce before token-bearing links are accepted, and the web callback forwards that nonce into the deep link. 6. Mobile WhatsApp verification polling no longer sends the verification token in the URL query string.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/web-merchant/src/app/[locale]/onboarding/hooks/useOnboardingForm.ts",
+      "line": 112,
+      "summary": "lastVerifiedPhone is still persisted in browser draft, leaking phone PII to localStorage",
+      "detail": "AC3 requires 'browser draft persistence excludes phone, email, and legal identity.' The toPersistedEngineState function correctly strips onboardingData.phone, onboardingData.email, and onboardingData.legalIdentity. However, it still includes `lastVerifiedPhone` (line 112), which is a verified phone number. This PII ends up in localStorage via the AdapterDraft. The field should be excluded from the persisted seed \u2014 it can be re-derived from the phoneVerified boolean when the draft is restored.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "WRONG_PATTERN",
+      "file": "apps/mobile/components/PhoneVerification.tsx",
+      "line": 92,
+      "summary": "Inconsistent indentation after GET-to-POST migration",
+      "detail": "Lines 92-101 (setRetryToken, setInterval, apiFetch call) use 6-space indent while the surrounding code (lines 88-91, 102+) uses 4-space indent. The code is functionally correct but the mixed indentation is a linting hazard and readability issue. ESLint passed because the indent rule likely isn't enforced, but this should be cleaned up.",
+      "preventable": true
+    }
+  ]
+}

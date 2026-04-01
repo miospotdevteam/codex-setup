@@ -1,0 +1,28 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 8,
+  "stepTitle": "Repair Drizzle migration journal drift",
+  "acceptanceCriteria": "Journal metadata matches the committed migration set and numbering is coherent enough for future Drizzle operations. Any renumbering is reflected consistently. Verification commands remain green.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/api/drizzle/0031_add_otp_verification_scope.sql",
+      "line": null,
+      "summary": "Migration SQL file referenced by journal does not exist on disk",
+      "detail": "The journal at idx 32 references tag '0031_add_otp_verification_scope', but no corresponding SQL file exists at apps/api/drizzle/0031_add_otp_verification_scope.sql. The consent-schema.ts diff adds a 'scope' text column and 'otp_verifications_scope_idx' index to otpVerifications, so the migration SQL should contain ALTER TABLE and CREATE INDEX statements. Without the SQL file, drizzle-kit migrate will fail when attempting to apply this migration. Either generate it via drizzle-kit generate or create it manually.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/api/drizzle/meta/",
+      "line": null,
+      "summary": "No meta snapshot files exist for journal entries 19-32",
+      "detail": "Snapshots only exist for entries 0000-0004, 0011, 0013, 0015-0018. The 14 newly added journal entries (idx 19-32) have no corresponding snapshot JSON files. While some earlier gaps (0005-0010, 0012, 0014) are pre-existing, the complete absence of snapshots for all new entries may indicate they were never generated via drizzle-kit. Drizzle-kit uses snapshots for diffing when generating new migrations \u2014 missing snapshots may break future drizzle-kit generate commands.",
+      "preventable": true
+    }
+  ]
+}

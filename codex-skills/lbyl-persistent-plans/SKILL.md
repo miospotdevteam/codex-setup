@@ -229,8 +229,16 @@ field contains groups directly:
 ## Phase 2: Execute the Plan
 
 This phase assumes Step 1 exploration already happened in parallel and Step 2
-planning already followed the Codex-write, optional-Claude-attack,
+planning already followed the Codex-write, required-Claude-attack-when-triggered,
 Codex-evaluate, Orbit-review sequence before execution began.
+
+The Claude attack pass is required when ANY of these triggers applied during
+planning:
+
+- the plan was large or high-blast-radius
+- Codex materially revised the locally drafted plan
+- the sequencing or verification strategy still felt fragile
+- the user explicitly asked for extra pressure-testing
 
 ### The Checkpoint Rule (THE #1 RULE OF EXECUTION)
 

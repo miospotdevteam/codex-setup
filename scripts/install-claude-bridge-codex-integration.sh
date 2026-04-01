@@ -8,6 +8,9 @@ MCP_DIR="$ROOT_DIR/claude-bridge"
 SERVER_PATH="$MCP_DIR/server.mjs"
 CLAUDE_SUPPORT_DIR="$ROOT_DIR/claude-support/look-before-you-leap"
 MCP_NAME="${CLAUDE_BRIDGE_MCP_NAME:-claude-bridge}"
+CONFIG_PATH="${CODEX_CONFIG_PATH:-$HOME/.codex/config.toml}"
+MCP_STARTUP_TIMEOUT_SEC="${CLAUDE_BRIDGE_MCP_STARTUP_TIMEOUT_SEC:-300}"
+MCP_TOOL_TIMEOUT_SEC="${CLAUDE_BRIDGE_MCP_TOOL_TIMEOUT_SEC:-10800}"
 CODEX_BIN="${CODEX_BIN:-codex}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -141,5 +144,43 @@ printf 'Installed VS Code extension from %s\n' "$latest_vsix"
 
 "$CODEX_CMD" mcp remove "$MCP_NAME" >/dev/null 2>&1 || true
 "$CODEX_CMD" mcp add "$MCP_NAME" -- "$NODE_CMD" "$SERVER_PATH" >/dev/null
+mkdir -p "$(dirname "$CONFIG_PATH")"
+touch "$CONFIG_PATH"
+"$PYTHON_CMD" - "$CONFIG_PATH" "$MCP_NAME" "$MCP_STARTUP_TIMEOUT_SEC" "$MCP_TOOL_TIMEOUT_SEC" <<'PYEOF'
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+server_name = sys.argv[2]
+startup_timeout = int(sys.argv[3])
+tool_timeout = int(sys.argv[4])
+
+text = config_path.read_text(encoding="utf-8")
+section_re = re.compile(
+    rf"(?m)^\[mcp_servers\.{re.escape(server_name)}\]\n(?P<body>(?:^(?!\[).*(?:\n|$))*)"
+)
+match = section_re.search(text)
+if not match:
+    raise SystemExit(f"MCP server section not found: [mcp_servers.{server_name}]")
+
+body = match.group("body")
+
+def upsert_timeout(body: str, key: str, value: int) -> str:
+    line = f"{key} = {value}"
+    pattern = re.compile(rf"(?m)^{re.escape(key)}\s*=.*$")
+    if pattern.search(body):
+        return pattern.sub(line, body, count=1)
+    separator = "" if not body or body.endswith("\n") else "\n"
+    return body + separator + line + "\n"
+
+body = upsert_timeout(body, "startup_timeout_sec", startup_timeout)
+body = upsert_timeout(body, "tool_timeout_sec", tool_timeout)
+text = text[: match.start("body")] + body + text[match.end("body") :]
+config_path.write_text(text, encoding="utf-8")
+PYEOF
 printf 'Configured Codex MCP server %s\n' "$MCP_NAME"
+printf 'Configured claude-bridge MCP timeouts: startup=%ss tool=%ss\n' "$MCP_STARTUP_TIMEOUT_SEC" "$MCP_TOOL_TIMEOUT_SEC"
 "$CODEX_CMD" mcp get "$MCP_NAME"

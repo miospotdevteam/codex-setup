@@ -1,0 +1,37 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 111,
+  "stepTitle": "Scope OTP verification to the action being authorized",
+  "acceptanceCriteria": "OTP proof cannot be reused across unrelated flows. Consent submit, public booking actions, and beach booking each require matching scoped verification. Existing OTP tests pass or are updated.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/api/drizzle/",
+      "line": null,
+      "summary": "No SQL migration for the `scope` column on `otp_verifications`",
+      "detail": "The Drizzle schema (`apps/api/src/db/consent-schema.ts`) adds `scope: text('scope')` and an index, but no corresponding SQL migration file exists under `apps/api/drizzle/`. The journal (`_journal.json`) has no entry for a scope migration. Production deployment will fail or the column will not exist, causing all scoped OTP operations to break at runtime.",
+      "preventable": true
+    },
+    {
+      "severity": "HIGH",
+      "category": "MISSED_CONSUMER",
+      "file": "apps/mobile/app/(consumer)/book/[slug].tsx",
+      "line": 243,
+      "summary": "Mobile guest booking does not pass `verificationProof` or use scoped verification",
+      "detail": "The mobile app dispatches `SET_PHONE_VERIFIED` without a `verificationProof` (line 243) and `CreateBookingInput` in `apps/mobile/hooks/api/useBooking.ts:9` lacks a `verificationProof` field. Since `booking-action-routes.ts` now requires `data.verificationProof` for unauthenticated guests (falling through to `null` \u2192 `phone_not_verified`), all mobile guest bookings will be rejected with HTTP 400.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "MISSING_TEST",
+      "file": "apps/api/src/__tests__/integration/public-consent-proof.test.ts",
+      "line": 50,
+      "summary": "Consent proof test seeds OTP without `scope`, but consent verify route now requires scope match",
+      "detail": "The `createConsentVerificationProof` helper (line 48-65) inserts an OTP row with `scope: undefined` (null), then calls `/public/consent/${token}/verify`. The consent verify route now passes `scope: buildConsentOtpScope(token)` to `verifyPhoneOtpCode`, which queries `eq(scope, 'consent:v1:TOKEN')`. Since the seeded row has `scope=null`, the lookup will miss and the test will fail when run against a real database. The integration tests were all skipped (432 skip) due to missing `TEST_DATABASE_URL`, masking this failure.",
+      "preventable": true
+    }
+  ]
+}

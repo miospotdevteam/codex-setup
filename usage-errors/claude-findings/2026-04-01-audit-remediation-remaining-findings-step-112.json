@@ -1,0 +1,19 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 112,
+  "stepTitle": "Repair Drizzle migration journal drift",
+  "acceptanceCriteria": "Journal metadata matches the committed migration set and numbering is coherent enough for future Drizzle operations. Any renumbering is reflected consistently. Verification commands remain green.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "apps/api/drizzle/meta/_journal.json",
+      "line": 229,
+      "summary": "Journal references deleted migration 0031_add_otp_verification_scope",
+      "detail": "The stale OTP scope SQL file (0031_add_otp_verification_scope.sql) was correctly removed from disk, but the corresponding journal entry at idx 32 was left in _journal.json. There are 32 SQL files but 33 journal entries. The suggested verification command exits 1 with extra: [\"0031_add_otp_verification_scope\"]. The journal entry at lines 229-234 must be removed so the journal is coherent through 0030.",
+      "preventable": true
+    }
+  ]
+}

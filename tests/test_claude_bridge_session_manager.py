@@ -58,6 +58,17 @@ class SessionManagerCommandTests(unittest.TestCase):
         if hasattr(self, "temp_dir"):
             self.temp_dir.cleanup()
 
+    def test_bundled_plugin_dir_contains_explorer_skill(self) -> None:
+        manager = self.make_manager()
+
+        plugin_dir = manager.resolve_plugin_dir()
+
+        self.assertIsNotNone(plugin_dir)
+        plugin_path = Path(plugin_dir)
+        explorer_skill = plugin_path / "skills" / "explorer" / "SKILL.md"
+        self.assertTrue(explorer_skill.is_file())
+        self.assertTrue(explorer_skill.read_text(encoding="utf-8").strip())
+
     def test_verification_uses_read_only_tools_with_plugin_and_hooks_disabled(self) -> None:
         manager = self.make_manager()
         captured: dict[str, object] = {}

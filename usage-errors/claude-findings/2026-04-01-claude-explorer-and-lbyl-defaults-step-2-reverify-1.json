@@ -1,0 +1,19 @@
+{
+  "plan": "claude-explorer-and-lbyl-defaults",
+  "project": "/Users/robertobortolaso/Projects/codex-setup",
+  "step": 2,
+  "stepTitle": "Make Claude plan approval a required step in the core LBYL planning contract",
+  "acceptanceCriteria": "The conductor, writing-plans, and persistent-plans skills explicitly name those four triggers and describe Claude attack-plan approval as required whenever they apply rather than optional, and the parity doc reflects both the required approval rule and explorer as a Claude-bundle capability.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "INCOMPLETE_WORK",
+      "file": "codex-skills/lbyl-persistent-plans/SKILL.md",
+      "line": 232,
+      "summary": "persistent-plans does not list the four trigger conditions",
+      "detail": "The acceptance criteria require 'The conductor, writing-plans, and persistent-plans skills explicitly name those four triggers'. The conductor (lines 256-259) and writing-plans (lines 315-318) both enumerate the four triggers: large/high-blast-radius, materially revised Codex draft, fragile sequencing/verification, and explicit user request. The persistent-plans file only contains the compound label 'required-Claude-attack-when-triggered' on line 232 with no enumeration of the individual triggers. A Codex session reading only persistent-plans would not know which conditions make the Claude attack pass required.",
+      "preventable": true
+    }
+  ]
+}

@@ -188,7 +188,11 @@ Updated the Codex-side instructions so the intended asymmetric model is now:
 - dep-partition context feeds step sizing and parallelization where dep maps exist
 - Codex keeps the conductor session lean by spawning sub-agents for non-trivial
   exploration, audits, and disjoint implementation lanes
-- `attack_plan` is optional for high-risk or materially revised drafts
+- the slim Claude support bundle now includes explorer support alongside its
+  existing frontend and verification roles
+- `attack_plan` is required whenever the existing trigger conditions apply:
+  large/high-blast-radius draft, materially revised Codex draft, fragile
+  sequencing/verification, or explicit user request
 - Orbit reviews the resulting draft
 - Claude is reserved for materially visual frontend work and independent verification
 

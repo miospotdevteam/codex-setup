@@ -37,11 +37,15 @@ Upstream skills also shipped from this repo:
 
 ### Operating rules
 - Default to `lbyl-conductor` + `lbyl-engineering-discipline` for any Codex repo invocation, not only obvious coding tasks.
+- Treat the installed `lbyl-*` skill pack as the default operating mode in Codex, not as an optional add-on the user must re-request each time.
+- Proactively invoke the exact `lbyl-*` skill that matches the task shape:
+  `lbyl-writing-plans` for non-trivial planning, `lbyl-systematic-debugging` for failures, `lbyl-refactoring` for multi-file restructuring, and `lbyl-agent-setup` for repo guidance work.
 - The installer also writes a managed machine-global default block to `~/.codex/AGENTS.md`, so Codex sessions from anywhere on this machine inherit that default unless a nearer project `AGENTS.md` overrides it.
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - During execution, treat `plan.json` as the definition and `progress.json` as the mutable runtime tracker.
 - For non-trivial work, Codex owns planning locally, fans out discovery and implementation lanes through sub-agents where useful, and presents the resulting plan through Orbit review before execution.
+- When a plan is large or high-blast-radius, materially revised, fragile in sequencing or verification, or the user explicitly asks for extra pressure-testing, require a Claude `attack_plan` approval pass before Orbit review or execution.
 - Keep planning, immediate critical-path edits, and final integration in the main Codex session; delegated lanes must write findings or progress back to disk for the conductor to merge.
 - If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py status` first and confirm `sessionSetup` is present. If the guard runtime is missing, stop and repair setup before claiming LBYL compliance. Then run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
 - If `codex-guard` is not installed in the repo, still follow the full LBYL plan/review/verification process, but state explicitly that hard runtime enforcement is unavailable instead of implying it ran.
@@ -75,4 +79,6 @@ each machine clones or pulls the GitHub repo and then runs the local installer.
 The installer also configures `codex-guard` globally for Codex unless
 `SKIP_CODEX_GUARD_INSTALL=1` is set, and configures `claude-bridge` unless
 `SKIP_CLAUDE_BRIDGE_INSTALL=1` is set. It also installs the machine-global
-Codex default block unless `SKIP_GLOBAL_AGENTS_INSTALL=1` is set.
+Codex default block unless `SKIP_GLOBAL_AGENTS_INSTALL=1` is set. The
+repo-local Claude support bundle now includes `explorer` alongside
+`frontend-design`, `immersive-frontend`, and `independent-verification`.

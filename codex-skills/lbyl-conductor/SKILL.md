@@ -252,8 +252,16 @@ The expected flow is:
    routing, and acceptance criteria.
 4. Review the draft locally before Orbit review. Codex remains the
    orchestrator and final local reviewer.
-5. Use `attack_plan` only as an optional extra adversarial pass for
-   high-risk drafts; it is not part of the required default flow.
+5. If ANY of these triggers apply, run `attack_plan` before Orbit review:
+   - the plan is large or high-blast-radius
+   - Codex materially revised the locally drafted plan
+   - the sequencing or verification strategy still feels fragile
+   - the user explicitly asks for extra pressure-testing
+6. Treat the Claude attack pass as required when triggered. Do not present
+   the plan for Orbit review until you have either:
+   - incorporated the relevant findings and reached a stable draft, or
+   - concluded with evidence that the triggered pass was unavailable and
+     surfaced that setup limitation explicitly.
 
 ### Plan review via Orbit
 
@@ -345,8 +353,8 @@ Execution rules:
   tool with discovery/design context, exact step scope, and any Codex
   follow-up prompt. Claude edits the same working tree directly.
 - Brainstorming and plan drafting both happen in Codex by default.
-- Plan attack remains available as an optional extra review pass for large or
-  risky drafts.
+- Plan attack belongs to the planning gate. By execution time, any triggered
+  Claude attack pass should already have happened.
 
 The planner may provide `routingHint`, but the conductor resolves the final
 executor before execution. The default bias is Codex. Route to Claude only

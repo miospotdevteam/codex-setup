@@ -304,20 +304,20 @@ Groups should have 3-8 files each. If a group exceeds 8, split it.
 has been evaluated. If you skip this, large steps will fail mid-execution
 when context runs out.
 
-### 7. Optional Claude attack pass for high-risk drafts
+### 7. Required Claude attack pass when trigger conditions apply
 
-The default plan-authoring pass already came from Codex. An adversarial Claude
-pass is optional and should be reserved for large, risky, or materially edited
-drafts.
+The default plan-authoring pass already came from Codex. Claude is not the
+default plan author, but an adversarial Claude attack pass becomes REQUIRED
+when the draft crosses specific risk thresholds.
 
-Use `claude-bridge` `attack_plan` only when one of these is true:
+Run `claude-bridge` `attack_plan` when ANY of these is true:
 
 - the plan is large or high-blast-radius
 - Codex materially revised the locally drafted plan
 - the sequencing or verification strategy still feels fragile
 - the user explicitly asks for extra pressure-testing
 
-When you do run it:
+When a trigger applies:
 
 1. Call `claude-bridge` `attack_plan` with the current cwd, the plan name,
    the `plan.json` path, the `masterPlan.md` path, and any concise summary of
@@ -327,9 +327,12 @@ When you do run it:
    relevant to the repo, user request, and discovery evidence.
 4. If Claude proposes irrelevant, speculative, or already-covered changes,
    reject them and keep the draft as-is.
+5. If the attack pass produced meaningful revisions, re-run `attack_plan`
+   against the updated draft until it is stable enough to proceed or you have
+   surfaced a concrete blocker.
 
-If you skip this pass, that is acceptable in the default Codex-led planning
-flow. Do not invent a fake attack result.
+If none of the triggers apply, you may skip this pass. Do not invent a fake
+attack result. If a trigger does apply, do not silently skip the pass.
 
 ### 8. Present for review via Orbit
 

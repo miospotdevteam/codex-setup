@@ -1,0 +1,46 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 9,
+  "stepTitle": "Redesign shared web auth token storage",
+  "acceptanceCriteria": "The active shared web auth flow no longer persists refresh tokens in browser cookies, web middleware keys off the non-sensitive auth marker cookie, and the staged implementation is internally consistent across web-runtime, auth-ui, and both web apps.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "category": "WRONG_PATTERN",
+      "file": "packages/web-runtime/src/server/auth-session-route.ts",
+      "line": 6,
+      "summary": "Staged route uses 'sb-auth-present' hint cookie but middleware checks 'miospot-web-auth'",
+      "detail": "auth-session-route.ts defines AUTH_HINT_COOKIE = 'sb-auth-present' as a local constant, while auth-cookie-names.ts exports AUTH_SESSION_COOKIE = 'miospot-web-auth' \u2014 and both web middlewares use the latter. If the staged route is activated, the middleware would never see the hint cookie it sets, causing all authenticated users to be redirected to /login on dashboard access. The staged route should import from auth-cookie-names.ts and use AUTH_SESSION_COOKIE instead of its own local constant.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "WRONG_PATTERN",
+      "file": "packages/web-runtime/src/server/auth-session-route.ts",
+      "line": 5,
+      "summary": "Staged route still stores refresh tokens in an 'sb-refresh-token' cookie, contradicting the migration goal",
+      "detail": "The active flow deliberately moved refresh tokens from cookies to sessionStorage. But auth-session-route.ts (mounted at /api/auth/session in both apps) still sets a REFRESH_COOKIE = 'sb-refresh-token' with maxAge 30 days. While the route isn't called by any client code yet, it's live and could be called directly. This introduces a path that re-persists refresh tokens in cookies \u2014 the exact thing the migration removed. The staged route should either use httpOnly-only server-side storage (which it partially does \u2014 the cookie IS httpOnly) and clearly document that this is the intentional server-side-only design, or align with the sessionStorage approach.",
+      "preventable": true
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "WRONG_PATTERN",
+      "file": "packages/web-runtime/src/server/auth-session-route.ts",
+      "line": 4,
+      "summary": "Staged route hardcodes 'sb-access-token' instead of importing ACCESS_TOKEN_COOKIE constant",
+      "detail": "auth-session-route.ts defines ACCESS_COOKIE = 'sb-access-token' locally while the identical value is already exported as ACCESS_TOKEN_COOKIE from auth-cookie-names.ts. If the cookie name ever changes in the shared constants, the staged route would silently diverge. Should import from auth-cookie-names.ts for consistency.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "OTHER",
+      "file": "packages/web-runtime/src/lib/auth-cookies.ts",
+      "line": 15,
+      "summary": "Missing blank line between SESSION_MARKER constant and canUseSessionStorage function",
+      "detail": "Line 15 (const REFRESH_STORAGE_KEY) is immediately followed by line 16 (function canUseSessionStorage) with no blank line separator. Minor style inconsistency with the rest of the file.",
+      "preventable": false
+    }
+  ]
+}

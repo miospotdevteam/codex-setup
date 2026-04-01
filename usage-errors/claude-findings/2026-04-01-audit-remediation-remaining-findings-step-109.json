@@ -1,0 +1,28 @@
+{
+  "plan": "audit-remediation-remaining-findings",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 109,
+  "stepTitle": "Mobile auth remediation",
+  "acceptanceCriteria": "1. The mobile auth redirect is bound to a locally issued mobile_state nonce. 2. Incoming signup/recovery links reject malformed or unscoped paths. 3. The web callback forwards mobile_state into the deep link. 4. WhatsApp verification polling no longer sends the token in the URL query string.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "category": "MISSED_CONSUMER",
+      "file": "packages/web-runtime/src/hooks/usePhoneVerification.ts",
+      "line": 155,
+      "summary": "Web-runtime phone verification still sends token in URL query string",
+      "detail": "The acceptance criteria state 'WhatsApp verification polling no longer sends the token in the URL query string.' The mobile client was migrated to POST, but the shared `usePhoneVerification` hook in `packages/web-runtime` (used by web-consumer and web-merchant) still calls `GET /auth/phone/whatsapp-status?token=...`, sending the token in the URL. The GET endpoint was left in the API for this consumer, but the security concern about tokens in URLs applies equally to web callers. Either migrate this consumer to POST as well, or document this as an explicit scope cut.",
+      "preventable": true
+    },
+    {
+      "severity": "LOW",
+      "category": "WRONG_PATTERN",
+      "file": "apps/mobile/components/PhoneVerification.tsx",
+      "line": 92,
+      "summary": "Indentation regression inside startPolling callback",
+      "detail": "Lines 92-101 have 6-space indentation while the surrounding code (lines 89-91, 102+) uses 4-space indentation. The diff shifted `setRetryToken(tokenValue)` and the `pollingRef.current = setInterval(...)` block inward by 2 extra spaces without adjusting the rest of the function body. This is purely cosmetic but inconsistent with the file's style.",
+      "preventable": true
+    }
+  ]
+}
