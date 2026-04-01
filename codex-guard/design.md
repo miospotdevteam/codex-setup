@@ -10,11 +10,12 @@ The implemented guard covers the highest-value parity rules:
 
 1. Plan must exist and pass validation before execution starts.
 2. Source files are read-only by default at session start.
-3. Only one plan step is writable at a time.
-4. Step completion is blocked without a recorded Claude PASS verdict when
+3. Guard runtime activation is recorded on disk at session start.
+4. Only one plan step is writable at a time.
+5. Step completion is blocked without a recorded Claude PASS verdict when
    `claudeVerify: true`.
-5. Session start can resume an in-progress step automatically.
-6. Checkpoints and bypasses are audited on disk.
+6. Session start can resume an in-progress step automatically.
+7. Checkpoints and bypasses are audited on disk.
 
 The guard preserves intent rather than copying Claude hook mechanics.
 
@@ -36,6 +37,8 @@ Runs from Codex `config.toml` via `[sandbox].setup`.
 Behavior:
 - locks all git-tracked files with write bits removed
 - clears stale validation state for the new session
+- writes `.temp/plan-mode/guard/.guard-session` so later commands can prove
+  the guard runtime was actually established for this repo
 - if the active plan has an `in_progress` step, re-unlocks that step's files
 - records the resumed step in `.temp/plan-mode/guard/.guard-state`
 
@@ -46,6 +49,7 @@ Typical output:
 ### `validate-plan`
 
 Checks the active plan before execution:
+- `.guard-session` exists for the current repo, proving `setup` ran
 - active `plan.json` exists
 - `review.status` is `approved` or `skipped`
 - skipped review has a non-empty `skipReason`
@@ -54,6 +58,8 @@ Checks the active plan before execution:
   `executor`, `claudeVerify`
 
 On success it writes `.temp/plan-mode/guard/.guard-validated`.
+If the runtime marker is missing, validation fails because the session cannot
+truthfully claim LBYL-compliant guarded execution.
 
 ### `begin-step <step-id>`
 
@@ -110,8 +116,19 @@ The guard writes project-local state:
     ├── active/<plan>/plan.json
     └── guard/
         ├── .guard-state
+        ├── .guard-session
         ├── .guard-audit.log
         └── .guard-validated
+```
+
+.temp/plan-mode/guard/.guard-session example:
+
+```json
+{
+  "setupAt": "2026-04-01T15:14:00+00:00",
+  "projectRoot": "/abs/path/to/repo",
+  "triggeredFrom": "/abs/path/to/repo"
+}
 ```
 
 `.temp/plan-mode/guard/.guard-state` example:

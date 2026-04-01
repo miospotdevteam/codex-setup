@@ -36,14 +36,15 @@ Upstream skills also shipped from this repo:
 - `look-before-you-leap/skills/webapp-testing`
 
 ### Operating rules
-- Default to `lbyl-conductor` + `lbyl-engineering-discipline` for coding work.
+- Default to `lbyl-conductor` + `lbyl-engineering-discipline` for any Codex repo invocation, not only obvious coding tasks.
 - The installer also writes a managed machine-global default block to `~/.codex/AGENTS.md`, so Codex sessions from anywhere on this machine inherit that default unless a nearer project `AGENTS.md` overrides it.
 - Run exploration in parallel by default; split discovery across at least two lanes when the task is non-trivial.
 - Before editing source, create `.temp/plan-mode/active/<plan-name>/plan.json` and `.temp/plan-mode/active/<plan-name>/masterPlan.md`.
 - During execution, treat `plan.json` as the definition and `progress.json` as the mutable runtime tracker.
 - For non-trivial work, Codex owns planning locally, fans out discovery and implementation lanes through sub-agents where useful, and presents the resulting plan through Orbit review before execution.
 - Keep planning, immediate critical-path edits, and final integration in the main Codex session; delegated lanes must write findings or progress back to disk for the conductor to merge.
-- If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
+- If `codex-guard` is installed for the session, run `python3 codex-guard/guard.py status` first and confirm `sessionSetup` is present. If the guard runtime is missing, stop and repair setup before claiming LBYL compliance. Then run `python3 codex-guard/guard.py validate-plan` before execution, `begin-step <N>` before step edits, `checkpoint` every 2-3 file edits, and `complete-step <N>` after verification.
+- If `codex-guard` is not installed in the repo, still follow the full LBYL plan/review/verification process, but state explicitly that hard runtime enforcement is unavailable instead of implying it ran.
 - Present non-trivial plans through Orbit review before source edits unless the user explicitly skips that review.
 - Update plan progress every 2-3 file edits.
 - Serialize `plan_utils.py` writes; never update the same `plan.json` in parallel.

@@ -57,6 +57,9 @@ class GuardCliTests(unittest.TestCase):
     def guard_state_dir(self) -> Path:
         return self.root / ".temp" / "plan-mode" / "guard"
 
+    def activate_guard_runtime(self) -> subprocess.CompletedProcess[str]:
+        return self.run_guard("setup")
+
     def make_plan(
         self,
         *,
@@ -136,12 +139,20 @@ class GuardCliTests(unittest.TestCase):
 
     def test_validate_plan_rejects_pending_review(self) -> None:
         self.make_plan(review_status="pending")
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         result = self.run_guard("validate-plan")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("approved or explicitly skipped", result.stderr)
 
+    def test_validate_plan_requires_runtime_setup_marker(self) -> None:
+        self.make_plan()
+        result = self.run_guard("validate-plan")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("guard runtime is inactive", result.stderr)
+
     def test_validate_plan_resolves_executor_metadata(self) -> None:
         self.make_plan(executor=None)
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         result = self.run_guard("validate-plan")
         self.assertEqual(result.returncode, 0, result.stderr)
         plan = self.load_plan()
@@ -185,6 +196,7 @@ class GuardCliTests(unittest.TestCase):
 
     def test_begin_step_rejects_claude_executor(self) -> None:
         self.make_plan(executor="claude", routing_hint="claude")
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
 
         result = self.run_guard("begin-step", "1")
@@ -197,6 +209,7 @@ class GuardCliTests(unittest.TestCase):
 
     def test_begin_step_allows_codex_executor(self) -> None:
         self.make_plan(executor="codex")
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
 
         result = self.run_guard("begin-step", "1")
@@ -207,6 +220,7 @@ class GuardCliTests(unittest.TestCase):
 
     def test_complete_step_requires_claude_pass(self) -> None:
         self.make_plan()
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
         self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
 
@@ -228,6 +242,7 @@ class GuardCliTests(unittest.TestCase):
 
     def test_complete_step_locks_files_and_marks_done(self) -> None:
         self.make_plan()
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
         self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
 
@@ -251,7 +266,9 @@ class GuardCliTests(unittest.TestCase):
 
     def test_guard_state_is_written_under_temp_plan_mode_guard(self) -> None:
         self.make_plan()
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
         self.assertEqual(self.run_guard("validate-plan").returncode, 0)
+        self.assertTrue((self.guard_state_dir() / ".guard-session").exists())
         self.assertTrue((self.guard_state_dir() / ".guard-validated").exists())
         self.assertEqual(self.run_guard("begin-step", "1").returncode, 0)
         self.assertTrue((self.guard_state_dir() / ".guard-state").exists())
@@ -260,6 +277,20 @@ class GuardCliTests(unittest.TestCase):
         self.assertFalse((self.root / ".guard-validated").exists())
         self.assertFalse((self.root / ".guard-state").exists())
         self.assertFalse((self.root / ".guard-audit.log").exists())
+
+    def test_status_reports_session_setup_marker(self) -> None:
+        self.make_plan()
+        self.assertEqual(self.activate_guard_runtime().returncode, 0)
+
+        result = self.run_guard("status")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIsNotNone(payload["sessionSetup"])
+        self.assertEqual(
+            Path(payload["sessionSetup"]["projectRoot"]).resolve(),
+            self.root.resolve(),
+        )
 
     def test_legacy_root_guard_state_is_migrated(self) -> None:
         self.make_plan()

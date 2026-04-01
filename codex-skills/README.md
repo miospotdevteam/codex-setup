@@ -30,7 +30,9 @@ upstream source stays in the repo for sync, but installed Codex sessions use
 
 The same installer also configures `codex-guard` by default by writing a
 Codex `[sandbox].setup` entry that runs `codex-guard/guard.py setup` at
-session start in future Codex sessions.
+session start in future Codex sessions. That setup now records
+`.temp/plan-mode/guard/.guard-session`, and `validate-plan` fails closed if a
+repo session tries to proceed without that runtime marker.
 
 If a local Orbit checkout is available, the same installer also configures the
 `orbit` MCP server in Codex and refreshes the Orbit VS Code extension so Orbit
@@ -94,7 +96,10 @@ Ask for the skills explicitly:
   and the hard verification gate.
 - When installed, `codex-guard` is the hard-default write gate on the Codex
   side for validated step execution.
-- The conductor assumes the companion skills are active for coding work.
+- The conductor treats LBYL as the default for any Codex repo invocation, not
+  only explicit coding tasks.
+- A session should not claim LBYL compliance unless `python3 codex-guard/guard.py status`
+  reports a non-null `sessionSetup` when the repo has `codex-guard`.
 - Persistent plans use `plan.json` as execution state and `masterPlan.md` as
   the frozen Orbit-reviewed proposal.
 - Exploration is expected to run in parallel before planning.

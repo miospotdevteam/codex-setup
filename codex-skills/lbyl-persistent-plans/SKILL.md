@@ -342,6 +342,8 @@ Before executing any step, confirm the active `plan.json` is valid:
 3. every step has an explicit `executor`
 4. every step has an explicit `claudeVerify`
 5. `claudeVerify` remains `true` unless the user explicitly opted out
+6. if the repo has `codex-guard`, `python3 codex-guard/guard.py status`
+   reports a non-null `sessionSetup`
 
 If any of those checks fail, the plan is invalid. Do not execute from it.
 Repair the plan first, and if necessary go back through `lbyl-writing-plans`
@@ -352,6 +354,10 @@ and Orbit review.
 If `codex-guard` is installed for the current repo, treat it as the runtime
 execution gate that wraps this plan loop:
 
+- run `python3 codex-guard/guard.py status` before the first step and confirm
+  `sessionSetup` is present
+- if `sessionSetup` is missing, stop and repair the runtime instead of
+  continuing on best effort
 - run `python3 codex-guard/guard.py validate-plan` before the first step
 - run `python3 codex-guard/guard.py begin-step <N>` before editing a step's files
 - run `python3 codex-guard/guard.py checkpoint` every 2-3 file edits
@@ -360,6 +366,10 @@ execution gate that wraps this plan loop:
 
 The plan on disk is still the source of truth; the guard simply controls which
 step is writable and whether completion is allowed.
+
+If the repo does not have `codex-guard`, still follow the full persistent-plan
+loop. Just do not imply that guarded runtime enforcement happened when it did
+not.
 
 ### Never mark done without verified work
 

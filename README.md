@@ -67,18 +67,21 @@ source stays in the repo for sync, but installed Codex sessions use
 `immersive-frontend` remains available for motion-heavy frontend work, and the
 upstream-only skills such as `doc-coauthoring`, `mcp-builder`, `svg-art`, and
 `webapp-testing` are installed directly from the vendored upstream tree. The
-`lbyl-*` skills remain the Codex-native defaults for coding work.
+`lbyl-*` skills remain the Codex-native defaults for any Codex repo invocation.
 
 The same installer also configures `codex-guard` by default:
 
 - writes a Codex `[sandbox].setup` entry to `~/.codex/config.toml`
 - runs `codex-guard/guard.py setup` at session start in future Codex sessions
 - makes source files read-only by default until a validated plan step is begun
+- records guard runtime activation as `.temp/plan-mode/guard/.guard-session`,
+  which later `status` / `validate-plan` calls use to confirm the guarded path
+  is actually active
 
 The installer also configures a machine-global Codex instruction layer:
 
 - writes a managed defaults block to `~/.codex/AGENTS.md`
-- makes coding work default to `lbyl-conductor` plus
+- makes any Codex repo invocation default to `lbyl-conductor` plus
   `lbyl-engineering-discipline` in future Codex sessions
 - preserves any unrelated user content in `~/.codex/AGENTS.md`
 - defers to nearer project or nested `AGENTS.md` files when a repo provides
@@ -266,7 +269,7 @@ bash scripts/resume-active-plan-codex.sh --print-command
 
 Mention the skills explicitly or rely on project `AGENTS.md` defaults. After
 running the installer, Codex also has a machine-global default in
-`~/.codex/AGENTS.md`, so coding work should already bias toward the conductor
+`~/.codex/AGENTS.md`, so repo work should already bias toward the conductor
 unless a nearer project `AGENTS.md` overrides it.
 Typical prompts:
 
@@ -275,7 +278,7 @@ Typical prompts:
 - `Use lbyl-systematic-debugging for this failure.`
 - `Use immersive-frontend for this motion-heavy landing page.`
 
-For coding work, the expected default is:
+For any Codex repo invocation, the expected default is:
 
 - explore first, in parallel
 - keep the main Codex session lean by spawning sub-agents for non-trivial
@@ -285,7 +288,11 @@ For coding work, the expected default is:
 - write `.temp/plan-mode/active/<plan-name>/plan.json` and `masterPlan.md` before source edits
 - let `plan_utils.py` write mutable execution state to `progress.json` during execution
 - have Codex draft and finalize the plan locally, then present it for Orbit review
-- if `codex-guard` is installed, use `validate-plan`, `begin-step`, `checkpoint`, and `complete-step` during execution
+- if `codex-guard` is installed, run `status` first and confirm `sessionSetup`
+  is present before using `validate-plan`, `begin-step`, `checkpoint`, and
+  `complete-step`
+- if `codex-guard` is not installed, still follow the same LBYL loop but say
+  explicitly that hard runtime enforcement is unavailable
 - update the plan every 2-3 file edits
 - if the session starts feeling crowded, checkpoint and resume from a fresh
   Codex session instead of trying to self-clear context in place
@@ -301,10 +308,16 @@ skips that review.
 hook-based enforcement. It does not try to recreate Claude hooks literally.
 Instead, it uses a default-deny file-locking model plus explicit step gates:
 
+- `python3 codex-guard/guard.py status`
 - `python3 codex-guard/guard.py validate-plan`
 - `python3 codex-guard/guard.py begin-step <N>`
 - `python3 codex-guard/guard.py checkpoint`
 - `python3 codex-guard/guard.py complete-step <N>`
+
+`status` should report a non-null `sessionSetup` before a session claims LBYL
+compliance. `validate-plan` now refuses to continue when that runtime marker is
+missing, so a broken or bypassed setup path fails closed instead of quietly
+degrading to best effort.
 
 The installer writes a `[sandbox].setup` entry so future Codex sessions run:
 
@@ -314,6 +327,7 @@ setup = "python3 /absolute/path/to/codex-setup/codex-guard/guard.py setup"
 ```
 
 Current guard scope:
+- runtime activation marker via `.guard-session`
 - plan validation and review metadata checks
 - one writable step at a time
 - smart resume of in-progress steps

@@ -16,6 +16,10 @@ injected alongside this one:
 
 **You must follow both companion skills for every coding task.**
 
+In repo work, this is the default operating mode for any Codex invocation
+that could inspect, plan, or modify source. Do not wait for the user to say
+"use LBYL" before following it.
+
 ---
 
 ## Step 0: Discover Available Skills
@@ -82,6 +86,21 @@ create a local `AGENTS.md`, initialize `.temp/plan-mode/`, document any
 dep-map config explicitly, and make sure the installed guard path matches the
 actual checkout. GPT-5.4 responds well to direct operating rules, exact
 commands, and explicit acceptance criteria over long motivational framing.
+
+### Guard-runtime preflight
+
+Before you treat a repo session as LBYL-compliant, check whether guarded
+runtime enforcement is actually active:
+
+1. If the repo has `codex-guard/guard.py`, run `python3 codex-guard/guard.py status`.
+2. Confirm the JSON output includes a non-null `sessionSetup`.
+3. If `sessionSetup` is missing, stop. Repair the Codex `[sandbox].setup`
+   integration or run `python3 codex-guard/guard.py setup` before execution.
+4. Do not describe the session as LBYL-compliant while that runtime is missing.
+
+If the repo does not have `codex-guard`, still use the full LBYL exploration,
+planning, review, and verification workflow. Just be explicit that the hard
+runtime gate is unavailable in that repo instead of implying it ran.
 
 ### Skill feedback logging
 
@@ -377,16 +396,20 @@ active plan.
 If `codex-guard` is installed for the repo, execution should use it as the
 hard-default gate:
 
-1. `python3 codex-guard/guard.py validate-plan`
-2. `python3 codex-guard/guard.py begin-step <N>`
-3. edit only the unlocked step files
-4. `python3 codex-guard/guard.py checkpoint` every 2-3 file edits
-5. after local verification and Claude PASS, `python3 codex-guard/guard.py complete-step <N>`
+1. `python3 codex-guard/guard.py status` and confirm `sessionSetup` is present
+2. `python3 codex-guard/guard.py validate-plan`
+3. `python3 codex-guard/guard.py begin-step <N>`
+4. edit only the unlocked step files
+5. `python3 codex-guard/guard.py checkpoint` every 2-3 file edits
+6. after local verification and Claude PASS, `python3 codex-guard/guard.py complete-step <N>`
 
 This is the Codex-native analogue for the Claude plugin's hook-time write
 gates. It is not identical to hooks, but it preserves the same intent:
 validated plans, explicit step ownership, and a completion gate that depends
 on real verification.
+
+If `sessionSetup` is missing, execution must stop instead of degrading to a
+best-effort interpretation. Fix the runtime first, then continue.
 
 `validate-plan` is also the routing checkpoint: it runs the conductor's
 executor resolver and stamps each step with conductor-owned routing metadata

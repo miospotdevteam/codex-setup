@@ -73,6 +73,10 @@ def validation_path(project_root: Path) -> Path:
     return state_path(project_root, ".guard-validated")
 
 
+def session_runtime_path(project_root: Path) -> Path:
+    return state_path(project_root, ".guard-session")
+
+
 def unlock_state_path(project_root: Path) -> Path:
     return state_path(project_root, ".guard-state")
 
@@ -189,6 +193,21 @@ def write_validation(project_root: Path, plan_path: Path) -> None:
     payload = {"plan_path": str(plan_path), "validated_at": utc_now()}
     validation_path(project_root).parent.mkdir(parents=True, exist_ok=True)
     with validation_path(project_root).open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+
+def read_session_runtime(project_root: Path) -> dict[str, Any] | None:
+    path = session_runtime_path(project_root)
+    if not path.is_file():
+        return None
+    with path.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def write_session_runtime(project_root: Path, payload: dict[str, Any]) -> None:
+    session_runtime_path(project_root).parent.mkdir(parents=True, exist_ok=True)
+    with session_runtime_path(project_root).open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
 
@@ -344,6 +363,15 @@ def cmd_setup(project_root: Path, args: argparse.Namespace) -> int:
         make_read_only(file_path)
 
     clear_unlock_state(project_root)
+    write_session_runtime(
+        project_root,
+        {
+            "setupAt": utc_now(),
+            "projectRoot": str(project_root),
+            "triggeredFrom": str(Path.cwd().resolve()),
+        },
+    )
+    append_audit(project_root, "setup", repo=str(project_root))
 
     try:
         plan_path = find_active_plan(project_root, args.plan)
@@ -380,6 +408,12 @@ def cmd_setup(project_root: Path, args: argparse.Namespace) -> int:
 
 def cmd_validate_plan(project_root: Path, args: argparse.Namespace) -> int:
     plan_path = find_active_plan(project_root, args.plan)
+    session_runtime = read_session_runtime(project_root)
+    if not session_runtime:
+        raise GuardError(
+            "guard runtime is inactive for this repo. Run `python3 codex-guard/guard.py setup` "
+            "or repair the Codex [sandbox].setup integration before claiming LBYL compliance."
+        )
     resolve_executor = load_resolve_executor()
     routing_result = resolve_executor.resolve_plan(plan_path)
     _, plan = read_plan(plan_path)
@@ -493,6 +527,7 @@ def cmd_status(project_root: Path, args: argparse.Namespace) -> int:
     payload: dict[str, Any] = {
         "projectRoot": str(project_root),
         "lockedFiles": 0,
+        "sessionSetup": None,
         "validatedPlan": None,
         "unlocked": None,
         "lastAuditEvent": None,
@@ -502,6 +537,10 @@ def cmd_status(project_root: Path, args: argparse.Namespace) -> int:
         payload["lockedFiles"] = len(git_tracked_files(project_root))
     except subprocess.CalledProcessError:
         payload["lockedFiles"] = 0
+
+    session_runtime = read_session_runtime(project_root)
+    if session_runtime:
+        payload["sessionSetup"] = session_runtime
 
     validation = read_validation(project_root)
     if validation:

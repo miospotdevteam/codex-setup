@@ -69,8 +69,8 @@ It did not have:
 
 | Claude plugin capability | Current Claude mechanism | Codex-native equivalent before this work | Gap | Codex-native decision |
 |---|---|---|---|---|
-| Session-start enforcement | Claude `SessionStart` hook | Skill text only | High | Install `codex-guard` through Codex `[sandbox].setup` so session start locks files and resumes in-progress steps |
-| Plan-before-edit gate | `PreToolUse` hook on `Edit|Write|Bash` | Process guidance only | High | `guard.py setup` locks tracked files; `begin-step` unlocks only validated step files |
+| Session-start enforcement | Claude `SessionStart` hook | Skill text only | High | Install `codex-guard` through Codex `[sandbox].setup` so session start locks files, records `.guard-session`, and resumes in-progress steps |
+| Plan-before-edit gate | `PreToolUse` hook on `Edit|Write|Bash` | Process guidance only | High | `guard.py status` / `validate-plan` now fail closed when `.guard-session` is missing, and `begin-step` unlocks only validated step files |
 | Parallel exploration discipline | Claude can fan out Codex helpers from the plugin side | Serial exploration guidance only | Medium | Codex conductor now requires foreground-parallel exploration before planning |
 | Claude-led plan authoring before approval | Claude plugin leads writing-plans | Codex-side docs still centered Codex-authored drafts | High | Codex now drafts and finalizes plans locally; Claude drafting is optional and not part of the required default flow |
 | Review / approval gate | Hook checks on plan metadata and receipts | Orbit guidance only | Medium | `guard.py validate-plan` enforces `review.status` plus `skipReason` shape; Orbit remains the preferred approval tool after local Codex drafting |

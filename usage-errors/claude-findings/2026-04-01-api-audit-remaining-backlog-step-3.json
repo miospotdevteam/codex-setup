@@ -1,0 +1,19 @@
+{
+  "plan": "api-audit-remaining-backlog",
+  "project": "/Users/robertobortolaso/Projects/miospot",
+  "step": 3,
+  "stepTitle": "Consolidate duplicated menu assembly around F5",
+  "acceptanceCriteria": "1. Remaining duplicated menu assembly paths are replaced by a shared builder contract. 2. Public, preview, and editor/publishing consumers preserve existing response semantics. 3. Targeted API tests and any directly affected consumer tests pass. 4. Relevant maintainer docs are updated if route or builder behavior documentation changes.",
+  "date": "2026-04-01",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "category": "MISSED_CONSUMER",
+      "file": "apps/api/src/lib/whatsapp/tools/get-menu.ts",
+      "line": 28,
+      "summary": "WhatsApp get-menu tool duplicates menu assembly instead of using shared buildMenu()",
+      "detail": "This file queries menuCategories (active) and menuItems (available) directly, groups items by categoryId, and maps to a response shape \u2014 the exact same assembly logic as buildMenu() with mode 'public' minus locale/translation handling. AC1 requires all duplicated menu assembly paths to go through the shared builder. The WhatsApp tool should call buildMenu({ mode: 'public', ... }) or a new simplified mode and project the result to its simpler shape, rather than reimplementing the query+grouping. The FINAL-CONSOLIDATED-REPORT.md F5 closure section does not mention this consumer at all.",
+      "preventable": true
+    }
+  ]
+}

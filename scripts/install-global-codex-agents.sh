@@ -37,12 +37,14 @@ block = f"""{begin}
 These defaults apply machine-wide. Follow the nearer project or nested
 `AGENTS.md` file when one exists.
 
-## Default Coding Workflow
+## Default Codex Workflow
 
-- For coding work, default to `lbyl-conductor` and `lbyl-engineering-discipline`.
+- For any Codex repo invocation, default to `lbyl-conductor` and `lbyl-engineering-discipline`.
 - Explore first and do that exploration in parallel when possible.
 - Before non-trivial source edits, write `.temp/plan-mode/active/<plan-name>/plan.json`
   and `masterPlan.md`.
+- If the repo has `codex-guard`, check `python3 codex-guard/guard.py status` before execution.
+  If `sessionSetup` is missing, stop and repair the runtime setup before claiming LBYL compliance.
 - Keep the main Codex session lean: use it as the conductor and spawn
   sub-agents for non-trivial exploration, audits, and disjoint implementation
   lanes when that reduces context pressure.
